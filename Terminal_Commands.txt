@@ -1,0 +1,23 @@
+
+PROCESSO DI SETUP DA FARE SOLO LA PRIMA VOLTA
+
+1) crea una cartella in locale sul pc dove metterai tutti i tuoi file di codice 
+2) entra da terminale all'interno di questa cartella 
+3) usa il comando: git clone <copia https della repository github già creata> per importare il progetto in locale
+
+A questo punto avrai in locale l'intero progetto che include i files scritti da tutti i membri del progetto
+
+
+Se vuoi aggiungere un nuovo file su Git usa i seguenti comandi:
+1) trascina il file che vuoi caricare all'interno della cartella locale (repository che hai importato al punto 3)
+2) usa il comando: git add <nome del file da aggiungere a git> (se hai aggiunto più files usa il comando: git add .)
+3) usa il comando: git commit -m "qui dentro scrivi il messaggio relativo al commit che stao facendo"
+4) usa il comando: git push per caricare su git i tuoi files
+
+
+La volta successiva se un membro avrà caricato su git un nuovo file e vuoi averlo nel tuo locale
+usa il comando
+
+git pull
+
+all'interno della tua repository locale.
