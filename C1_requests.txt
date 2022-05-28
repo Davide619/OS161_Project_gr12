@@ -1,0 +1,177 @@
+PROGETTO C1
+
+Tale progetto vede l’espansione del modulo DUMBVM di OS161 per la gestione della memoria virtuale basato su processi page table e richiede di lavorare su TLB.
+
+
+
+L’idea è sostituire il modulo DUMBVM con un nuovo sistema di memoria virtuale. Tale nuovo sistema dovrà implementare la richiesta del paging (con una tabella delle pagine) sostituendo le pagine considerando i seguenti requisiti:
+
+-È necessario implementare un nuovo sistema di TLB tale per cui se si riempie il kernel non va in crash
+-caricamento su richiesta delle pagine
+-inoltre, è necessaria la sostituzione della pagina (basata sulla selezione della vittima), in modo che un nuovo frame può essere trovato quando non ci sono più disponibili frame liberi.
+-È possibile implementare diversi criteri per la tabella delle pagine: ad esempio, per tabella delle pagine del processo o PT invertito, politiche di selezione delle vittime, gestione dei frame gratuita, ecc. 
+
+
+
+GESTIONE TLB
+Ogni volta che si fa accesso alla TLB include il numero di pagina fisica su 20bit e 5 campi:
+
+-global (1bit): se sestato a 1 ignora i bits pid nel TLB
+
+-valid (1bit): se sestato a 1 allora vuol dire che la TLB contiene un indirizzo valido. Questo significa 
+che la pagina virtuale cercata è presente nella memoria fisica. Se manca la pagina si verifica una eccezione (EX TLBL oppure EX TLBS)
+
+-dirty (1bit): viene sestato a 1 per indicare che quella determinata pagina è stata modificata. Il dirty bit del sistema operativo non è come questo. Esso indica se è possibile modificare una pagina particolare. OS/161 può cancellare questo bit per indicare che una pagina è di sola lettura e per forzare la MMU a generare un'eccezione EX MOD se c'è un tentativo di scrivere sulla pagina.
+
+ 
+-nocache (1 bit): non utilizzato in System/161. In un vero processore, indica che
+la cache hardware verrà disabilitata quando si accede a questa pagina.
+
+-pid(6bit): è uno spazio indirizzi utilizzato per consentire la permanenza delle voci nel TLB dopo un cambio del contesto.
+
+In os161 non vengono usate le voci pid e global.
+Ciò significa che tutte le voci valide nel TLB dovrebbero descrivere le pagine nello spazio degli indirizzi del processo attualmente in esecuzione e il contenuto del TLB dovrebbe essere invalidato quando c’è uno switch. Nel sistema dumbvm, l’invalidazione del TLB viene eseguita dalla funzione come funzione attivazione, che invalida tutte le entrate della TLB.
+Il codice di cambio di contesto di OS/161 chiama come attivato dopo ogni cambio di contesto (purché il nuovo thread in esecuzione ha uno spazio di indirizzi). Se conservi questa funzionalità come attivato nel tuo nuovo sistema VM, ti sarai occupato dell'invalidazione del TLB.
+
+Per questo progetto, devi scrivere il codice per gestire il TLB. Quando si verifica un missTLB,
+Il gestore delle eccezioni di OS/161 dovrebbe caricare una voce appropriata nel TLB. Se c'è
+spazio libero nel TLB, la nuova voce dovrebbe andare nello spazio libero. In caso contrario, OS/161 dovrebbe scegliere una voce TLB per sfrattarla e sfrattarla per fare spazio alla nuova voce. Come descritto sopra, OS/161 dovrebbe anche assicurarsi che tutte le voci TLB facciano riferimento al processo attualmente in esecuzione.
+
+È necessario implementare una politica di sostituzione TLB round-robin molto semplice (ma stupida). Questo è come first-in-first-out, tranne per il fatto che in realtà non ci preoccupiamo di quando ogni pagina è stata sostituita. L'algoritmo funziona come segue
+	int tlb_get_rr_victim(void) {
+		int victim;
+		static unsigned int next_victim = 0;
+		victim = next_victim;
+		next_victim = (next_victim + 1) % 					NUM_TLB;
+		return victim;
+	}
+
+
+
+
+Nel sistema dumbvm, tutti e tre i segmenti dello spazio degli indirizzi (testo, dati e stack) sono entrambi leggibile e scrivibile dall'applicazione. Per questo compito, dovresti cambiarlo in modo che il segmento di testo di ogni applicazione è di sola lettura. Il tuo kernel dovrebbe impostare le voci TLB in modo che qualsisi tentativo da parte di un'applicazione di modificare la sua sezione di testo farà sì che la MMU MIPS generi un’ eccezione di memoria di sola lettura (VM_FAULT_READONLY). Se si verifica una tale eccezione, il tuo kernel dovrebbe terminare il processo che ha tentato di modificare il suo segmento di testo. Il tuo kernel non dovrebbe andare in crash.
+
+
+
+Attualmente, quando OS/161 carica un nuovo programma in uno spazio di indirizzi utilizzando runprogram, pre-alloca frame fisici per tutte le pagine virtuali del programma e precarica tutte le pagine nella memoria fisica.
+Per questa assegnazione, è necessario modificarlo in modo che i frame fisici siano allocati su-
+demand e le pagine virtuali vengono caricate su richiesta. “Su richiesta” significa che la pagina
+dovrebbe essere caricato (e dovrebbe essere allocato spazio fisico per esso) la prima volta che il file l'applicazione tenta di utilizzare (leggere o scrivere) quella pagina. Pagine che non vengono mai utilizzate da un’applicazione non dovrebbe mai essere caricato in memoria e non dovrebbe consumare un frame fisico.
+
+Per fare ciò, il tuo kernel deve disporre di alcuni mezzi per tenere traccia di quali parti di
+memoria fisica sono in uso e quali parti possono essere allocate per contenere nuove pagine virtuali caricate. Il tuo kernel avrà anche bisogno di un modo per tenere traccia di quali pagine da ogni spazio di indirizzi sono state caricati nella memoria fisica e dove si trovano all’interno di essa.
+
+Poiché le pagine di un programma non verranno precaricate nella memoria fisica all'avvio del programma in esecuzione e poiché il TLB mappa solo le pagine che sono in memoria, il programma genererà delle eccezioni dovute alla TLB miss mentre tenta di accedere alle sue pagine virtuali. 
+Ecco una descrizione di alto livello di cosa deve fare il kernel OS/161 quando la MMU genera un'eccezione TLB miss per a pagina particolare:
+
+Determina se la pagina è già in memoria.
+• Se è già in memoria, caricare una voce appropriata nel TLB (sostituendo una voce esistente se necessario e poi tornare dall'eccezione.
+• Se non è già in memoria, allora
+	o Assegna un posto nella memoria fisica per archiviare la pagina.
+	o Caricare la pagina, utilizzando l’ informazione del file ELF del programma.
+	o Aggiorna le informazioni di OS/161 su questo spazio di indirizzi.
+	o Caricare una voce appropriata nel TLB (sostituendo una voce TLB esistente se
+	necessario) e tornare dall'eccezione.
+Fino a quando non implementerai la sostituzione della pagina, non sarai in grado di eseguire applicazioni che toccano più pagine di quante rientrino nella memoria fisica, ma dovresti essere in grado di eseguire programmi di grandi dimensioni a condizione che quei programmi non tocchino più pagine di quelle che possono contenere.
+
+
+
+Dovresti implementare una politica di sostituzione delle pagine di tua scelta. É preferibile un algoritmo semplice che funzioni. Non preoccuparti di implementare tecniche per evitare o controllare il thrashing. Pagine che ne hanno bisogno di essere scritte su disco devono essere scritte in un file denominato SWAPFILE. Questo file sarà limitato a 9 MB (ovvero, 9 * 1024 * 1024 byte). Se in fase di esecuzione sono richiesti più di 9 MB di spazio di swap, il tuo
+il kernel dovrebbe chiamare panic("Out of swap space”). Fai in modo da cambiare facilmente la dimensione del file alla compilazione nel caso in cui sia necessario e modificalo prima della presentazione finale.
+
+Dovresti monitorare e stampare diverse statistiche relative alle prestazioni del sottosistema di memoria virtuale (inclusi errori TLB e sostituzioni TLB), quindi assicurati di implementarlo
+come descritto in modo da poter esaminare e confrontare facilmente queste statistiche.
+
+È possibile raccogliere le seguenti statistiche:
+• Errori TLB: il numero di errori TLB che si sono verificati (esclusi gli errori che
+	causano l'arresto anomalo di un programma).
+• Errori TLB con libero: il numero di errori TLB per i quali c'era spazio libero nel
+	TLB per aggiungere la nuova voce TLB (ovvero, non è richiesta alcuna sostituzione).
+• Errori TLB con sostituzione: il numero di errori TLB per i quali non c'era spazio libero
+	per la nuova voce TLB, quindi era necessaria la sostituzione.
+• Invalidazioni TLB: il numero di volte in cui il TLB è stato invalidato (questo conta il
+	numero di volte in cui l'intero TLB viene invalidato NON il numero di voci TLB invalidate)
+• Ricaricamenti TLB: il numero di TLB miss per le pagine che erano già in memoria.
+• Errori di pagina (zero): il numero di errori TLB che hanno richiesto che una nuova pagina fosse 		zero-riempito.
+• Errori di pagina (disco): il numero di errori TLB da cui è stato necessario caricare una pagina
+	disco.
+• Errori di pagina da ELF: il numero di errori di pagina che richiedono il recupero di una pagina da
+	file ELF.
+• Errori di pagina da Swapfile: il numero di errori di pagina da cui è necessario recuperare una 			pagina dal file di scambio.
+Scritture file di scambio: il numero di errori di pagina che richiedono la scrittura di una pagina 			nel file di scambio.
+Si noti che la somma di "Guasti TLB con libero" e "Guasti TLB con sostituzione" dovrebbe essere uguale a "Guasti TLB". Inoltre, la somma di "Ricaricamenti TLB", "Errori di pagina (disco)" e "Errori di pagina (zero)” dovrebbe essere uguale a "Guasti TLB". Quindi questo significa che non dovresti contare gli errori TLB che non vengono gestiti (ad esempio, provoca la chiusura del programma). 
+Il codice per stampare le statistiche lo farà stampando un avviso se queste uguaglianze non sono valide. Inoltre la somma di “Page Faults from ELF” e “Page Faults from Swapfile” dovrebbero essere uguali a “Page Faults (Disk)”.
+Quando viene spento (ad esempio, in vm_shutdown), il tuo kernel dovrebbe visualizzare le statistiche ha raccolto. Il display dovrebbe essere simile all'esempio seguente.
+
+
+In kern/vm
+addrspace.c: la parte indipendente dalla macchina dell'implementazione della memoria virtuale
+(alternativa a kern/arch/mips/vm/dumbvm.c) dovrebbe andare in questa directory.
+
+
+
+
+kmalloc.c: questo file contiene le implementazioni di kmalloc e kfree, per supportare dynamic
+allocazione di memoria per il kernel. Non dovrebbe essere necessario modificare il codice in
+questo file, ma è necessario capire come funziona l'allocazione dinamica della memoria del kernel
+in modo che il tuo gestore della memoria fisica interagisca correttamente con esso.
+
+
+
+In kern/syscall
+loadelf.c: questo file contiene le funzioni responsabili del caricamento di un eseguibile ELF dal file
+filesystem nello spazio di memoria virtuale. Dovresti già avere familiarità con questo file di Lab 2.
+Poiché implementerai il caricamento della pagina su richiesta, dovrai modificare il
+comportamento qui implementato.
+
+
+
+In kern/include
+addrspace.h: definisce l'interfaccia addrspace. Dovrai apportare modifiche qui, almeno per
+definire una struttura adrspace appropriata.
+
+vm.h: alcune definizioni relative alle VM, inclusi i prototipi per alcune funzioni chiave, come
+vm_fault (il gestore di miss TLB) e alloc_kpages (usato, tra l'altro, in kmalloc).
+
+
+
+In kern/arch/mips/vm
+dumbvm.c: questo file non deve essere utilizzato (quando si disabilita l'opzione dumbvm). Tuttavia, puoi usa il codice qui (con miglioramenti fatti in lab 2). Questo codice include anche esempi di come fare cose come manipolare il TLB.
+
+ram.c: questo file include funzioni che il kernel utilizza per gestire la memoria fisica (RAM)
+durante l'avvio del kernel, prima che il sistema VM sia stato inizializzato. Dal momento che la tua VM il sistema si occuperà essenzialmente della gestione della memoria fisica, è necessario
+capire come funzionano queste funzioni.
+
+
+
+
+In kern/arch/mips/include
+In questa directory, il file tlb.h definisce le funzioni utilizzate per manipolare il TLB. In
+inoltre, vm.h include alcune macro e costanti relative alla traduzione degli indirizzi sul file
+MIPS. Nota che questo vm.h è diverso dal vm.h in kern/include.
+
+
+
+Sei libero e dovrai modificare il codice del kernel esistente in aggiunta probabilmente avrai bisogno del codice per creare e utilizzare alcune nuove astrazioni. Se utilizzi uno o tutti i seguenti elementi abstractions si prega di inserire quel codice nella directory kern/vm usando i seguenti nomi di file:
+
+
+
+• coremap.c: tiene traccia dei frame fisici liberi
+• pt.c: le tabelle delle pagine e la manipolazione delle voci delle tabelle delle pagine vanno qui
+• segments.c: codice per il tracciamento e la manipolazione dei segmenti
+vm_tlb.c: codice per manipolare il tlb (compresa la sostituzione) • 
+swapfile.c: codice per la gestione e la manipolazione del file di scambio
+vmstats.c: codice per il monitoraggio delle statistiche
+
+
+
+Se ne hai bisogno, i file di intestazione corrispondenti dovrebbero essere inseriti in os161-1.11/kern/include in file denominati: addrspace.h, coremap.h, pt.h, segments.h, vm_tlb.h, vmstats.h e swapfile.h.
+
+
+
+Il progetto può essere preso in una delle tre varianti.
+C1.1) Pre-process page table, dove il problema della regione “vuota” tra i due
+	i segmenti e lo stack dovrebbero essere indirizzati
+C1.2) inverted page table, con “qualche” soluzione per velocizzare la ricerca lineare (non
+	necessariamente un hash, sebbene possibile).
+C1.3) Supporto TLB per il bit “sporco” (pagina modificata): deve essere affrontato da software, in 		quanto il bit di modifica non viene gestito automaticamente durante le operazioni di 			scrittura. Se non si sceglie questa opzione, le pagine “dati” possono essere considerate 		sporche/modificate anche se non scritte
