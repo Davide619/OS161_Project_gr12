@@ -76,29 +76,29 @@ Fino a quando non implementerai la sostituzione della pagina, non sarai in grado
 
 
 
-Dovresti implementare una politica di sostituzione delle pagine di tua scelta. É preferibile un algoritmo semplice che funzioni. Non preoccuparti di implementare tecniche per evitare o controllare il thrashing. Pagine che ne hanno bisogno di essere scritte su disco devono essere scritte in un file denominato SWAPFILE. Questo file sarà limitato a 9 MB (ovvero, 9 * 1024 * 1024 byte). Se in fase di esecuzione sono richiesti più di 9 MB di spazio di swap, il tuo
+Dovresti implementare una politica di sostituzione delle pagine di tua scelta. É preferibile un algoritmo semplice che funzioni. Non preoccuparti di implementare tecniche per evitare o controllare il thrashing. Le pagine che hanno bisogno di essere scritte su disco devono essere scritte in un file denominato SWAPFILE. Questo file sarà limitato a 9 MB (ovvero, 9 * 1024 * 1024 byte). Se in fase di esecuzione sono richiesti più di 9 MB di spazio di swap, il tuo
 il kernel dovrebbe chiamare panic("Out of swap space”). Fai in modo da cambiare facilmente la dimensione del file alla compilazione nel caso in cui sia necessario e modificalo prima della presentazione finale.
 
 Dovresti monitorare e stampare diverse statistiche relative alle prestazioni del sottosistema di memoria virtuale (inclusi errori TLB e sostituzioni TLB), quindi assicurati di implementarlo
 come descritto in modo da poter esaminare e confrontare facilmente queste statistiche.
 
 È possibile raccogliere le seguenti statistiche:
-• Errori TLB: il numero di errori TLB che si sono verificati (esclusi gli errori che
+• Errori TLB: il numero di miss TLB che si sono verificati (esclusi gli errori che
 	causano l'arresto anomalo di un programma).
-• Errori TLB con libero: il numero di errori TLB per i quali c'era spazio libero nel
+• Errori TLB con libero: il numero di miss TLB per i quali c'era spazio libero nel
 	TLB per aggiungere la nuova voce TLB (ovvero, non è richiesta alcuna sostituzione).
-• Errori TLB con sostituzione: il numero di errori TLB per i quali non c'era spazio libero
+• Errori TLB con sostituzione: il numero di miss TLB per i quali non c'era spazio libero
 	per la nuova voce TLB, quindi era necessaria la sostituzione.
 • Invalidazioni TLB: il numero di volte in cui il TLB è stato invalidato (questo conta il
 	numero di volte in cui l'intero TLB viene invalidato NON il numero di voci TLB invalidate)
-• Ricaricamenti TLB: il numero di TLB miss per le pagine che erano già in memoria.
-• Errori di pagina (zero): il numero di errori TLB che hanno richiesto che una nuova pagina fosse 		zero-riempito.
-• Errori di pagina (disco): il numero di errori TLB da cui è stato necessario caricare una pagina
-	disco.
-• Errori di pagina da ELF: il numero di errori di pagina che richiedono il recupero di una pagina da
+• Ricaricamenti TLB: il numero di TLB miss per pagine che erano già in memoria.
+• Errori di pagina (zero): il numero di miss TLB che hanno richiesto che una nuova pagina fosse 		zero-filled.
+• Errori di pagina (disco): il numero di miss TLB da cui è stato richiesto di caricare una pagina
+	dal disco.
+• Errori di pagina da ELF: il numero di errori di pagina che richiedono il recupero di una pagina dal
 	file ELF.
-• Errori di pagina da Swapfile: il numero di errori di pagina da cui è necessario recuperare una 			pagina dal file di scambio.
-Scritture file di scambio: il numero di errori di pagina che richiedono la scrittura di una pagina 			nel file di scambio.
+• Errori di pagina da Swapfile: il numero di errori di pagina da cui è necessario ottenere una 			pagina dallo swap file.
+Scritture file di scambio: il numero di errori di pagina che richiedono la scrittura di una pagina 			nello swap file.
 Si noti che la somma di "Guasti TLB con libero" e "Guasti TLB con sostituzione" dovrebbe essere uguale a "Guasti TLB". Inoltre, la somma di "Ricaricamenti TLB", "Errori di pagina (disco)" e "Errori di pagina (zero)” dovrebbe essere uguale a "Guasti TLB". Quindi questo significa che non dovresti contare gli errori TLB che non vengono gestiti (ad esempio, provoca la chiusura del programma). 
 Il codice per stampare le statistiche lo farà stampando un avviso se queste uguaglianze non sono valide. Inoltre la somma di “Page Faults from ELF” e “Page Faults from Swapfile” dovrebbero essere uguali a “Page Faults (Disk)”.
 Quando viene spento (ad esempio, in vm_shutdown), il tuo kernel dovrebbe visualizzare le statistiche ha raccolto. Il display dovrebbe essere simile all'esempio seguente.
@@ -160,12 +160,12 @@ Sei libero e dovrai modificare il codice del kernel esistente in aggiunta probab
 • pt.c: le tabelle delle pagine e la manipolazione delle voci delle tabelle delle pagine vanno qui
 • segments.c: codice per il tracciamento e la manipolazione dei segmenti
 vm_tlb.c: codice per manipolare il tlb (compresa la sostituzione) • 
-swapfile.c: codice per la gestione e la manipolazione del file di scambio
+swapfile.c: codice per la gestione e la manipolazione dello swap file
 vmstats.c: codice per il monitoraggio delle statistiche
 
 
 
-Se ne hai bisogno, i file di intestazione corrispondenti dovrebbero essere inseriti in os161-1.11/kern/include in file denominati: addrspace.h, coremap.h, pt.h, segments.h, vm_tlb.h, vmstats.h e swapfile.h.
+Se ne hai bisogno, gli header file corrispondenti dovrebbero essere inseriti in os161-1.11/kern/include in file denominati: addrspace.h, coremap.h, pt.h, segments.h, vm_tlb.h, vmstats.h e swapfile.h.
 
 
 
