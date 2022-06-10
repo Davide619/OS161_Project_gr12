@@ -152,54 +152,7 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
          *
          * Ignore EI_OSABI and EI_ABIVERSION - properly, we should
          * define our own, but that would require tinkering with the
-Last login: Mon May 30 18:56:27 on ttys000
-davidemilone@MacBook-Pro-di-Davide ~ % docker exec -it 4f7b12d87c3e32cb9ad4bd8978389032886603815da22eab3f0d9b6a9a0976aa /bin/sh
-$ ls
-os161
-$ cd os161
-$ ls
-root  src  tools
-$ cd root
-$ ls
-LHD0.img  bin      hostinclude  kernel         kernel-HELLO  man   sys161.conf  testscripts
-LHD1.img  hostbin  include  kernel-DUMBVM  lib       sbin  testbin
-$ cd ..
-$ cd src
-$ ls
-CHANGES  Makefile  build  common  configure  defs.mk  design  kern  man  mk  testscripts  userland
-$ cd kern
-$ ls
-Makefile  arch  compile  conf  dev  fs  gdbscripts  include  lib  main  proc  syscall  test  thread  vfs  vm
-$ cd vm
-$ ls
-addrspace.c  copyinout.c  kmalloc.c
-$ nano addrespace.c
-$ nano addrspace.c
-$ nano kmalloc.c
-$ ls
-addrspace.c  copyinout.c  kmalloc.c
-$ cd ..
-$ ls
-Makefile  arch  compile  conf  dev  fs  gdbscripts  include  lib  main  proc  syscall  test  thread  vfs  vm
-$ cd vm
-$ ls
-addrspace.c  copyinout.c  kmalloc.c
-$ cd ..
-$ cd syscall
-$ ls
-loadelf.c  runprogram.c  time_syscalls.c
-$ nano loadelf.c
-
-
-
-
-
-
-  GNU nano 4.8                                            loadelf.c                                                      
-         * linker to have it emit our magic numbers instead of the
-         * default ones. (If the linker even supports these fields,
-         * which were not in the original elf spec.)
-         */
+        */
 
         if (eh.e_ident[EI_MAG0] != ELFMAG0 ||
             eh.e_ident[EI_MAG1] != ELFMAG1 ||
@@ -233,7 +186,7 @@ $ nano loadelf.c
                 off_t offset = eh.e_phoff + i*eh.e_phentsize;
                 uio_kinit(&iov, &ku, &ph, sizeof(ph), offset, UIO_READ);
 
-                result = VOP_READ(v, &ku);
+                result = VOP_READ(v, &ku);                                                      /*leggiamo la regione dal file ELF e poi chiamiamo la funzione as_define_region*/
                 if (result) {
                         return result;
                 }
@@ -255,8 +208,8 @@ $ nano loadelf.c
                         return ENOEXEC;
                 }
 
-                result = as_define_region(as,
-                                          ph.p_vaddr, ph.p_memsz,
+                result = as_define_region(as,                                                   /*definisco i 3 segmenti in lettura, scrittura*/
+                                          ph.p_vaddr, ph.p_memsz,                               /*ph.p_vaddr ci dice a che indirizzo inizia la regione, ph.p_memsz ci dice la dimensione della regione*/
                                           ph.p_flags & PF_R,
                                           ph.p_flags & PF_W,
                                           ph.p_flags & PF_X);
@@ -265,7 +218,7 @@ $ nano loadelf.c
                 }
         }
 
-        result = as_prepare_load(as);
+        result = as_prepare_load(as);                                                   /* <------ viene chiamata per settare tutte le regioni di memoria come writeable*/ 
         if (result) {
                 return result;
         }
@@ -307,7 +260,7 @@ $ nano loadelf.c
                 }
         }
 
-        result = as_complete_load(as);
+        result = as_complete_load(as);                                                  /* <------ viene chiamata per riportare tutte le regioni di memoria allo stato iniziale*/ 
         if (result) {
                 return result;
         }

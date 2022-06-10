@@ -49,7 +49,7 @@
 void vm_bootstrap(void);
 
 /* Fault handling function called by trap code */
-int vm_fault(int faulttype, vaddr_t faultaddress);
+int vm_fault(int faulttype, vaddr_t faultaddress);          /*da capire dove chiamo il trap code e soprattutto devo far in modo che il trap code lo chiamo ogni volta che ho un miss ecc..*/
 
 /* Allocate/free kernel heap pages (called by kmalloc/kfree) */
 vaddr_t alloc_kpages(unsigned npages);

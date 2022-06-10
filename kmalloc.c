@@ -19,7 +19,7 @@ fill_deadbeef(void *vptr, size_t len)           /*Inizializza una regione di mem
         size_t i;
 
         for (i=0; i<len/sizeof(uint32_t); i++) {
-                ptr[i] = 0xdeadbeef;
+                ptr[i] = 0xdeadbeef;                                                            /*mette questo valore in ciascun blocco di memoria*/
         }
 }
 
@@ -693,50 +693,6 @@ kheap_dump(void)
 #endif
 }
 
-Last login: Mon May 30 18:56:27 on ttys000
-davidemilone@MacBook-Pro-di-Davide ~ % docker exec -it 4f7b12d87c3e32cb9ad4bd8978389032886603815da22eab3f0d9b6a9a0976aa /bin/sh
-$ ls
-os161
-$ cd os161
-$ ls
-root  src  tools
-$ cd root
-$ ls
-LHD0.img  bin      hostinclude  kernel         kernel-HELLO  man   sys161.conf  testscripts
-LHD1.img  hostbin  include      kernel-DUMBVM  lib           sbin  testbin
-$ cd ..
-$ cd src
-$ ls
-CHANGES  Makefile  build  common  configure  defs.mk  design  kern  man  mk  testscripts  userland
-$ cd kern
-$ ls
-Makefile  arch  compile  conf  dev  fs  gdbscripts  include  lib  main  proc  syscall  test  thread  vfs  vm
-$ cd vm
-$ ls
-addrspace.c  copyinout.c  kmalloc.c
-$ nano addrespace.c
-$ nano addrspace.c
-$ nano kmalloc.c
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  GNU nano 4.8                                            kmalloc.c                                            Modified  
 void
 kheap_dumpall(void)
 {

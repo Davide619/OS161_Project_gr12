@@ -78,14 +78,17 @@ int tlb_probe(uint32_t entryhi, uint32_t entrylo);
 
 /* Fields in the high-order word */
 #define TLBHI_VPAGE   0xfffff000
-/*      TLBHI_PID     0x00000fc0 */
+/*      TLBHI_PID     0x00000fc0 */                          /*a questo indirizzo corrisponde il PID bit che in OS161 non viene usato*/
 
 /* Fields in the low-order word */
 #define TLBLO_PPAGE   0xfffff000
-#define TLBLO_NOCACHE 0x00000800
-#define TLBLO_DIRTY   0x00000400
+#define TLBLO_NOCACHE 0x00000800                               /*il nocache bit non viene utilizzato*/
+#define TLBLO_DIRTY   0x00000400                               /*Questo dirty bit viene usato come bit di privilegio per la scrittura.
+                                                                 Se 1 allora è consentito scrivere dentro quel campo se 0 allora diventa 
+                                                                di sola lettura e se un processo prova a fare una scrittura su questa voce
+                                                                ottieni un'eccezione (EX MODE)*/
 #define TLBLO_VALID   0x00000200
-/*      TLBLO_GLOBAL  0x00000100 */
+/*      TLBLO_GLOBAL  0x00000100 */                          /*a questo indirizzo corrisponde il global bit che in OS161 non viene usato*/
 
 /*
  * Values for completely invalid TLB entries. The TLB entry index should

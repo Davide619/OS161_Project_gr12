@@ -115,7 +115,7 @@ alloc_kpages(unsigned npages)
         if (pa==0) {
                 return 0;
         }
-        return PADDR_TO_KVADDR(pa);
+        return PADDR_TO_KVADDR(pa);                     /*ritorna l'indirizzo iniziale di dove ha allocato le pagine*/
 }
                                                    
 void
@@ -134,7 +134,7 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 }
 
 int
-vm_fault(int faulttype, vaddr_t faultaddress)
+vm_fault(int faulttype, vaddr_t faultaddress)                                   /*gli passo l'indirizzo che mi ha generato l'errore*/
 {
         vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
         paddr_t paddr;
@@ -143,19 +143,19 @@ vm_fault(int faulttype, vaddr_t faultaddress)
         struct addrspace *as;
         int spl;
 
-        faultaddress &= PAGE_FRAME;
+        faultaddress &= PAGE_FRAME;                                                     /*operazione AND bitwise*/
 
         DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
         switch (faulttype) {
-            case VM_FAULT_READONLY:
-                /* We always create pages read-write, so we can't get this */
+            case VM_FAULT_READONLY:   /*salto qui ogni volta che il processore tenta di scrivere sulla TLB se seleziono tutte le voci come sola lettura*/                                                   /* vai a leggere la parte read-only text segment per capire come gestire questo caso*/
+                                        /* We always create pages read-write, so we can't get this */
                 panic("dumbvm: got VM_FAULT_READONLY\n");
-            case VM_FAULT_READ:
-            case VM_FAULT_WRITE:
+            case VM_FAULT_READ:                                 /*salto qui ogni volta che il processore fallisce una lettura*/
+            case VM_FAULT_WRITE:                                /*salto qui ogni volta che il processore fallisce una scrittura*/
                 break;
             default:
-                return EINVAL;
+                return EINVAL;                                                          /*capire dove vado a finire con questo errore*/
         }                                        
 
         if (curproc == NULL) {
@@ -173,7 +173,7 @@ vm_fault(int faulttype, vaddr_t faultaddress)
                  * No address space set up. This is probably also a
                  * kernel fault early in boot.
                  */
-                return EFAULT;
+                return EFAULT;                                                          /*capire dove vado a finire con questo errore*/
         }
 
         /* Assert that the address space has been set up properly. */
@@ -196,24 +196,24 @@ vm_fault(int faulttype, vaddr_t faultaddress)
         vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
         stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
         stacktop = USERSTACK;
-        if (faultaddress >= vbase1 && faultaddress < vtop1) {
-                paddr = (faultaddress - vbase1) + as->as_pbase1;
+        if (faultaddress >= vbase1 && faultaddress < vtop1) {                   /*in questi if controllo se l'informazione che ricevo dall'indirizzo fa parte del code, data o stack*/
+                paddr = (faultaddress - vbase1) + as->as_pbase1; /*code*/
         }
         else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-                paddr = (faultaddress - vbase2) + as->as_pbase2;
+                paddr = (faultaddress - vbase2) + as->as_pbase2; /*data*/
         }
         else if (faultaddress >= stackbase && faultaddress < stacktop) {
-                paddr = (faultaddress - stackbase) + as->as_stackpbase;
+                paddr = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
         }
         else {
-                return EFAULT;
+                return EFAULT;                                                  /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
         }
 
         /* make sure it's page-aligned */
         KASSERT((paddr & PAGE_FRAME) == paddr);
 
         /* Disable interrupts on this CPU while frobbing the TLB. */
-        spl = splhigh();
+        spl = splhigh();                                                        /*disabilita l'interrupt per evitare che mentre modifico la tlb si genera un interrupt e non finisco l'azione*/
 
         for (i=0; i<NUM_TLB; i++) {
                 tlb_read(&ehi, &elo, i);
@@ -260,7 +260,10 @@ as_destroy(struct addrspace *as)
 }
 
 void
-as_activate(void)
+as_activate(void) /*questa funzione va a invalidare le voci della TLB quando è necessario uno switch cioè quando si deve togliere 
+                un processo dalla memoria e portarlo su disco e rimpiazzare quello spazio con il nuovo processo preso da disco. 
+                Ogni volta che la CPU sta genstendo un process nella TLB è rimasta la traduzione di quell'indirizzo, quindi questa funzione
+                va a pulire quel campo e far spazio ad altri*/
 {
         int i, spl;
         struct addrspace *as;
@@ -288,7 +291,8 @@ as_deactivate(void)
 
 int
 as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
-                 int readable, int writeable, int executable)
+                 int readable, int writeable, int executable)              /*NON so se qua ma bisogna cambiare gli spazi di indirizzi dedicati al testo, dati e stack
+                                                                        in modo tale che siano di sola lettura. Attualmente sono settati come lettura e scrittura*/
 {
         size_t npages;
 
@@ -323,7 +327,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
          * Support for more than two regions is not available.
          */
         kprintf("dumbvm: Warning: too many regions\n");
-        return ENOSYS;
+        return ENOSYS;                                                                  /*capire dove vado a finire con questo errore*/
 }
 
 static
@@ -334,7 +338,10 @@ as_zero_region(paddr_t paddr, unsigned npages)
 }
 
 int
-as_prepare_load(struct addrspace *as)
+as_prepare_load(struct addrspace *as)                                   /*poiche in loaelf.c definiamo le regioni rispettivamente di sola lettura per code ecc... se noi volessimo però caricare quella
+                                                                        regione ad esempio all'inizio, non possiamo scriverci. queste due funzioni (as_prepare_load, as_complete_load) che sono richiamate dal kernel automaticamente, 
+                                                                        risolvono il problema. la prima funzione resetta tutti i permessi delle regioni come Writeble, ma hai bisogno anche di fare un backup di
+                                                                        quali erano i permessi delle regioni prima di questo evento. A tal proposito quando viene richiamata as_complete_load allora tutti i permessi vengono rimpostati come all'inizio*/
 {
         KASSERT(as->as_pbase1 == 0);
         KASSERT(as->as_pbase2 == 0);
@@ -344,7 +351,7 @@ as_prepare_load(struct addrspace *as)
 
         as->as_pbase1 = getppages(as->as_npages1);
         if (as->as_pbase1 == 0) {
-                return ENOMEM;
+                return ENOMEM;                                                           /*capire dove vado a finire con questo errore*/
         }
 
         as->as_pbase2 = getppages(as->as_npages2);
