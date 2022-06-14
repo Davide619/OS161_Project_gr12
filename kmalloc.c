@@ -9,7 +9,7 @@
 
 
 /*
- * Fill a block with 0xdeadbeef.
+ * Fill a block with 0xdeadbeef. 
  */
 static
 void
@@ -19,7 +19,7 @@ fill_deadbeef(void *vptr, size_t len)           /*Inizializza una regione di mem
         size_t i;
 
         for (i=0; i<len/sizeof(uint32_t); i++) {
-                ptr[i] = 0xdeadbeef;                                                            /*mette questo valore in ciascun blocco di memoria*/
+                ptr[i] = 0xdeadbeef;                                                            /*mette questo valore (3735928559) in ciascun blocco di memoria*/
         }
 }
 

@@ -150,8 +150,23 @@ vm_fault(int faulttype, vaddr_t faultaddress)                                   
         switch (faulttype) {
             case VM_FAULT_READONLY:   /*salto qui ogni volta che il processore tenta di scrivere sulla TLB se seleziono tutte le voci come sola lettura*/                                                   /* vai a leggere la parte read-only text segment per capire come gestire questo caso*/
                                         /* We always create pages read-write, so we can't get this */
-                panic("dumbvm: got VM_FAULT_READONLY\n");
+
+
+                /*qui devo terminare il processo che mi ha chiamato questo errore e continuare*/
+                /*idea è richiamare una funzione che vado a descrivere nel file vm_tlb*/
+
+                panic("dumbvm: got VM_FAULT_READONLY\n");     /*questa potrei anche toglierla*/
             case VM_FAULT_READ:                                 /*salto qui ogni volta che il processore fallisce una lettura*/
+
+
+                /*se sono qui vuol dire che non ho trovato la voce richiesta nella TLB
+                allora devo controllare se tale voce è presente nella memoria principale se si allora
+                aggiornare la TLB e se non c'è spazio sfrattare una voce. Se no, caricare il frame da disco,
+                quindi poi aggiornare la TLB*/
+
+
+
+
             case VM_FAULT_WRITE:                                /*salto qui ogni volta che il processore fallisce una scrittura*/
                 break;
             default:
@@ -198,6 +213,8 @@ vm_fault(int faulttype, vaddr_t faultaddress)                                   
         stacktop = USERSTACK;
         if (faultaddress >= vbase1 && faultaddress < vtop1) {                   /*in questi if controllo se l'informazione che ricevo dall'indirizzo fa parte del code, data o stack*/
                 paddr = (faultaddress - vbase1) + as->as_pbase1; /*code*/
+                /*quando ricevo questo indirizzo devo dargli solo il permesso di lettura*/
+
         }
         else if (faultaddress >= vbase2 && faultaddress < vtop2) {
                 paddr = (faultaddress - vbase2) + as->as_pbase2; /*data*/

@@ -1,7 +1,8 @@
 #include <mips/tlb.h>
+#include <mips/vm_tlb.h> /*file header di questo file. CONTROLLARE IL PERCORSO*/
 
 
-/*prototipi dichiarati in vm_tlb.h*/
+/*prototipi dichiarati in tlb.h  DA CANCELLARE QUI*/
 void tlb_random(uint32_t entryhi, uint32_t entrylo);
 void tlb_write(uint32_t entryhi, uint32_t entrylo, uint32_t index);
 void tlb_read(uint32_t *entryhi, uint32_t *entrylo, uint32_t index);
@@ -25,24 +26,8 @@ un indirizzo che non è mappato in modo tale che non sarà mai matchato*/
 
 
 
-/*funzione a cui passo l'indirizzo logico e ritorna TLB hit (indirizzo fisico) e TLB miss(indirizzo da cercare nella PT)*/
-/*QUI DENTRO VADO A IMPLEMENTARE LE TRE FUNZIONI*/
-void tlb_random(uint32_t entryhi, uint32_t entrylo){
-	
-}
-
-void tlb_write(uint32_t entryhi, uint32_t entrylo, uint32_t index){
-	/*scrivo all'interno della TLB quindi controllo prima se c'è spazio*/
-	if()
-}
-
-
-void tlb_read(uint32_t *entryhi, uint32_t *entrylo, uint32_t index){
-	
-}
-
-
-/*SCRIVERE QUI ALGORITMO DI REPLACEMENT*/
+/*SCRIVERE QUI ALGORITMO DI REPLACEMENT INOLTRE DEVO TENER CONTO CHE SE LA VOCE DA RIMPIAZZARE FA RIFERIMENTO AD UN SEGMENTO CODICE
+DEVO IMPOSTARE NELLA TLB IL PERMESSO DI SOLA LETTURA*/
 int tlb_get_rr_victim(void){
 	
 	int victim;
@@ -51,3 +36,43 @@ int tlb_get_rr_victim(void){
 	return victim;
 
 }
+
+
+/*SCRIVERE UNA FUNZIONE PER TERMINARE UN PROCESSO*/
+/*DA CAPIRE COME OTTENERE IL PID DEL PROCESSO CHE è ENTRATO NELLA TLB*/
+
+
+
+
+
+
+/*FUNZIONE PER IL FLUSH SPECIFICO NEL TLB*/
+static 
+void vm_tlbflush(vaddr_t target) 
+{
+    int spl;
+    int index;
+
+    spl = splhigh();
+    index = tlb_probe(target & PAGE_FRAME, 0);
+    if (index >=0) 
+        tlb_write(TLBHI_INVALID(index), TLBLO_INVALID(), index);
+    splx(spl);
+}
+
+
+
+/*SCRIVERE UNA FUNZIONE PER VEDERE SE CI SONO SPAZI VUOTI NELLA TLB
+CAPIRE INIZIALMENTE COSA SIGNIFICA AVERE UNO SPAZIO VUOTO, COSA CI TROVO?*/
+
+
+
+
+
+
+
+/*SCRIVERE UNA FUNZIONE CHE CERCA NELLA PAGE TABLE SE è PRESENTE LA VOCE RICHIESTA. SE Sì BISOGNA AGGIORNARE LA PAGE TABLE*/
+/*IN BASE ALL'ESITO DI QUESTA FUNZIONE SI DOVREBBE POI RICHIAMARE L'ALGORITMO DI REPLACEMENT CHE MI AGGIORNA LA TLB*/
+/*LìIMPLEMENTAZIONE DI QUESTA FUNZIONE FORSE è MEGLIO FARLA NELLA SEZIONE PT*/
+
+

@@ -38,7 +38,7 @@
  *
  * FILESIZE may be less than MEMSIZE; if so the remaining portion of
  * the in-memory segment should be zero-filled.
-  *
+ *
  * Note that uiomove will catch it if someone tries to load an
  * executable whose load address is in kernel space. If you should
  * change this code to not use uiomove, be sure to check for this case
