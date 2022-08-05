@@ -86,8 +86,12 @@ getppages(void) /*anzicchè passargli npages non passo niente in quanto voglio c
                 spinlock_acquire(&freemem_lock);
                 
 
+
+
                 /*IMPLEMENTARE UN ALGORITMO DI REPLACEMENT O RICHIAMRE ALGORITMO DI REPLACEMENT LASCIANDO 
                 IL FREEFRAME OCCUPATO*/
+
+
 
 
                 spinlock_release(&freemem_lock);
@@ -167,12 +171,12 @@ return 1;
 
 /* Allocate/free some kernel-space virtual pages */
 vaddr_t
-alloc_kpages(unsigned npages)
+alloc_kpages(void)                           /*MODIFIED*/
 {
         paddr_t pa;
 
         dumbvm_can_sleep();
-        pa = getppages(npages);
+        pa = getppages();
         if (pa==0) {
                 return 0;
         }
@@ -182,12 +186,12 @@ alloc_kpages(unsigned npages)
 void
 free_kpages(vaddr_t addr)                       /*ADDED*/                                           
 {
-        if (isTableActive()) {
+        //if (isTableActive()) {
                 paddr_t paddr = addr - MIPS_KSEG0;     /*converto l'indirizzo logico in indirizzo fisico utilizzando la maschera*/
                 long first = paddr/PAGE_SIZE;           /*Converto l’indirizzo fisico in indice d’inizio del frame*/
                 KASSERT(nRamFrames>first);
                 freeppages(paddr);    
-        }
+        //}
 
         (void)addr;
 }
@@ -202,7 +206,7 @@ vm_tlbshootdown(const struct tlbshootdown *ts)
 
 
 int
-vm_fault(int faulttype, vaddr_t faultaddress)  
+vm_fault(int faulttype, vaddr_t faultaddress)                           /*DA MODIFICARE*/
 {
         vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
         paddr_t paddr;
