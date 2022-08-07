@@ -36,7 +36,7 @@ vm_bootstrap(void)                                                              
                 freeRamFrames = allocSize = NULL; return;
         }*/
         for (int i=0; i<nRamFrames; i++) {
-                freeRamFrames[i] = (unsigned char)0; allocSize[i] = 0;
+                freeRamFrames[i] = (unsigned char)0;
         }
         /*spinlock_acquire(&freemem_lock);
         allocTableActive = 1;
@@ -76,13 +76,13 @@ getppages(void) /*anzicchè passargli npages non passo niente in quanto voglio c
         /*controllo se ho pagine libere attraverso il vettore freeFrames richiamado la funzione getfreeppages()*/
         addr = getfreeppages();
 
-        if (addr == 0) {/* se ho spazio in memoria allora alloco la pagina in RAM*/
+        if (addr != 0) {/* se ho spazio in memoria (un frame libero) allora alloco la pagina in RAM*/
                 spinlock_acquire(&stealmem_lock);
                 addr = ram_stealmem();          /*tale funzione alloca nella ram quindi non gli passo npages*/
                 spinlock_release(&stealmem_lock);
         }
 
-        if (addr != 0) { /*se non ho spazio in memoria allora utilizzo un algoritmo di replacement*/
+        if (addr == 0) { /*se non ho spazio in memoria allora utilizzo un algoritmo di replacement*/
                 spinlock_acquire(&freemem_lock);
                 
 
@@ -129,9 +129,7 @@ paddr_t getfreeppages(void) {
         }
         else {
 
-                /*se il freeframe è tutto occupato cado in questa sezione*/
-                /*VEDERE COSA DEVO FARE QUI*/
-
+                /*se il freeframe è tutto occupato cado in questa sezione e setto l'indirizzo a zero*/
                 addr = 0;
         }
 
@@ -169,7 +167,7 @@ return 1;
 
 
 
-/* Allocate/free some kernel-space virtual pages */
+/* Allocate/free some kernel-space virtual pages                         FORSE NON SERVE-UTILE LA FUNZIONE PADDR_TO_KVADDRS(pa)*/
 vaddr_t
 alloc_kpages(void)                           /*MODIFIED*/
 {
@@ -180,7 +178,10 @@ alloc_kpages(void)                           /*MODIFIED*/
         if (pa==0) {
                 return 0;
         }
-        return PADDR_TO_KVADDR(pa);                     
+        return PADDR_TO_KVADDR(pa);    /*ritorna l'indirizzo virtuale (della pagina) del kernel a cui 
+                                        corrisponde l'indirizzo fisico allocato in cui è allocata 
+                                        la pagina. Ovviamente il caso in cui l'indirizzo sia 0 questo non
+                                        esiste all'interno del kernel e quindi deve essere isolato*/                 
 }
                                                    
 void
@@ -390,11 +391,31 @@ as_activate(void) /*questa funzione va a invalidare le voci della TLB quando è 
         spl = splhigh();
 
         for (i=0; i<NUM_TLB; i++) {
-                tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
+                tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);        /*<------ Invalida tutte le voci della TLB*/
         }
 
         splx(spl);
 }
+
+
+/****************FUNZIONE DA VEDERE DOVE METTERE***************/
+/*********************FUNZIONE PER INVALIDARE SOLO UNA VOCE PRECISA DELLA TLB*****************************/
+int TLB_Invalidate(paddr_t paddr)
+{
+    u_int32_t ehi,elo,i;
+    for (i=0; i<NUM_TLB; i++) 
+    {
+        TLB_Read(&ehi, &elo, i);
+        if ((elo & 0xfffff000) == (paddr & 0xfffff000)) 
+        {
+            TLB_Write(TLBHI_INVALID(i), TLBLO_INVALID(), i);            
+        }
+    }
+
+    return 0;
+}
+/********************************************************************************************************/
+
 
 void
 as_deactivate(void)
@@ -427,7 +448,7 @@ as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
 
         if (as->as_vbase1 == 0) {
                 as->as_vbase1 = vaddr;
-                as->as_npages1 = npages;
+                as->as_npages1 = npages;                                
                 return 0;
         }
         if (as->as_vbase2 == 0) {
@@ -450,11 +471,16 @@ as_zero_region(paddr_t paddr, unsigned npages)
         bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
 
-/*int
-as_prepare_load(struct addrspace *as)                                   poiche in loaelf.c definiamo le regioni rispettivamente di sola lettura per code ecc... se noi volessimo però caricare quella
+
+
+
+/*funzione importante che prepara lo spazio di lavoro*/                 /*<-------- RIVEDERE DA QUI*/
+
+int
+as_prepare_load(struct addrspace *as)                                   /*poiche in loaelf.c definiamo le regioni rispettivamente di sola lettura per code ecc... se noi volessimo però caricare quella
                                                                         regione ad esempio all'inizio, non possiamo scriverci. queste due funzioni (as_prepare_load, as_complete_load) che sono richiamate dal kernel automaticamente, 
                                                                         risolvono il problema. la prima funzione resetta tutti i permessi delle regioni come Writeble, ma hai bisogno anche di fare un backup di
-                                                                        quali erano i permessi delle regioni prima di questo evento. A tal proposito quando viene richiamata as_complete_load allora tutti i permessi vengono rimpostati come all'inizio
+                                                                        quali erano i permessi delle regioni prima di questo evento. A tal proposito quando viene richiamata as_complete_load allora tutti i permessi vengono rimpostati come all'inizio*/
 {
         KASSERT(as->as_pbase1 == 0);
         KASSERT(as->as_pbase2 == 0);
@@ -464,7 +490,7 @@ as_prepare_load(struct addrspace *as)                                   poiche i
 
         as->as_pbase1 = getppages(as->as_npages1);
         if (as->as_pbase1 == 0) {
-                return ENOMEM;                                                           capire dove vado a finire con questo errore
+                return ENOMEM;                                                           //capire dove vado a finire con questo errore
         }
 
         as->as_pbase2 = getppages(as->as_npages2);
@@ -482,7 +508,7 @@ as_prepare_load(struct addrspace *as)                                   poiche i
         as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
 
         return 0;
-}*/
+}
 
 int
 as_complete_load(struct addrspace *as)
