@@ -1,0 +1,34 @@
+(DAVIDE)
+
+RUNPROGRAM.C:
+tale codice richiama LOADELF.C
+
+
+LOADELF.C:
+la funzione load_elf() chiama due cicli for. l'indice dei cicli va da i=0 ad e_phnum. Quest'ultimo si riferisce al program header number 
+che tipicamente per os161 è 3 che significa che l'elf file ha potenzialmente tre header quindi 3 sezioni ma solo due di loro
+sono usate per prendere informazioni. Infatti nell' iterazione 0 non viene preso niente quindi la sezione 0 non viene presa ma viene presa 
+la sezione 1 e 2 che corrisponde a prendere all'interno dell elf file solo le informazioni relative al segmento dato e al segmento codice.
+
+il primo ciclo for prepara lo spazio di memoria ad ospitare i segmenti attraverso la funzione as_define_region(). Questo ciclo infatti ha
+il compito di leggere dal elf file gli header dato e codice ed associare ad essi i rispettivi indirizzi dei segmenti codice e dato. Nella 
+pratica setta as_vbase1, as_vbase2, as_npages1, as_npages2. Riserva dello spazio CONTIGUO per il segmento dato e codice.
+finito questo ciclo viene chiamata la funzione as_prepare_load(as) che alloca tutta la memoria fisica necessaria per quello spazio logico 
+degli indirizzi.
+
+il secondo ciclo for rilegge nuovamente l'header dato e codice dall'elf file e avendo già definito la regione di memoria al ciclo for 
+precedente, carica ciasun segmento nella locazione opportuna.
+
+
+
+
+
+(ALESSANDRO)
+
+
+
+
+
+
+
+(WILLIAM)
