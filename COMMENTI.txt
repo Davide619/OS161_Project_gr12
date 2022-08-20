@@ -27,7 +27,19 @@ precedente, carica ciasun segmento nella locazione opportuna.
 Struttura del debug partendo dal loadelf.c:
 1)Funzione int load_elf():questa funzione carica un user program elf file nell'address space del processo attuale e ritorna l'entry point,cioè l'indirizzo iniziale da cui parte il Program Counter.
 Con as=proc_getas(); acquisisco la struttura dati dell'addresspace del process attuale.
-
+Con uio_kinit(...); leggo l'header eseguibile partendo da un offset per il file elf pari a 0.
+2)Eseguo un primo ciclo for(di 3 iterazioni,la prima non fa niente,la seconda e la terza riguardano il code segment e il data segment)per acuqisire dall'header eseguibile le informazioni sui segmenti di code e data,in particolare il virtual address space(p_vaddr) da cui partono e le loro dimensioni(p_memsz).
+3)Una volta acquisite le info richiamo la funzione as_define_region(as,....,...,..); :
+Funzione as_define_region(as,....,...,..):
+Questa funzione,dati i due virtual address dei segmenti e le memsize,definisce le zone della RAM in cui posizionarli e quanti frame conterranno in totale,allocabili.
+3.1)Dopo aver verificato che gli indirizzi fisici siano tutti nulli(da controllare questa cosa),vengono aggiornati con gli indirizzi della page in memoria corrispondenti che vogliamo allocare chiamando la funzione getppages(vaddr_t vaddr); :
+Funzione getppage(vaddr_t vaddr):
+Questa funzione si occupa di fornire l'indirizzo della pagina corrispondente al virtual address dato e allocare quella pagina in memoria chiamando al suo interno la funzione ram_stealmem(paddr_t firstpaddr1);(*ATTENZIONE*:se siamo in fase di inizializzazione della virtual memory come adesso,ha senso usare la ram_stealmem.Dopo quindi la fase di inizializzazione dovremo trovare un altro meccanismo per allocare memoria).
+La getppage a sua volta deve controllare se vi sono frame liberi partendo dall'address virtuale dato,per fare cio si serve della getfreepages();(essa ritorna l'indirizzo del primo frame libero dopo l'indirizzo fisico corrispondente a quello virtuale dato).
+Se la getppage non trova frame liberi dovra adottare una politica di page replacement per trovarne uno da utilizzare.
+4)Adesso,con il secondo for carico effettivamente i segmenti in memoria. Dopo aver letto nuovamente i dati dell'elf file dall'header eseguibile richiamo la funzione load_segment();
+5)Infine,dopo il secondo for,richiamo la funzione as_complete_load(as) per controllare se la struttura dati dell'address space è stata correttamente riempita.
+6)Ritorno l'entry point 
 
 
 
