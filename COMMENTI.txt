@@ -25,8 +25,9 @@ precedente, carica ciasun segmento nella locazione opportuna.
 
 (ALESSANDRO)
 Struttura del debug partendo dal loadelf.c:
-1)Funzione int load_elf():questa funzione carica un user program elf file nell'address space del processo attuale e ritorna l'entry point,cioè l'indirizzo iniziale da cui parte il Program Counter.
-Con as=proc_getas(); acquisisco la struttura dati dell'addresspace del process attuale.
+Funzione int load_elf():questa funzione carica un user program elf file nell'address space del processo attuale e ritorna l'entry point,
+cioè l'indirizzo iniziale da cui parte il Program Counter:
+1)Con as=proc_getas(); acquisisco la struttura dati dell'addresspace del process attuale.
 Con uio_kinit(...); leggo l'header eseguibile partendo da un offset per il file elf pari a 0.
 2)Eseguo un primo ciclo for(di 3 iterazioni,la prima non fa niente,la seconda e la terza riguardano il code segment e il data segment)per acuqisire dall'header eseguibile le informazioni sui segmenti di code e data,in particolare il virtual address space(p_vaddr) da cui partono e le loro dimensioni(p_memsz).
 3)Una volta acquisite le info richiamo la funzione as_define_region(as,....,...,..); :
