@@ -53,8 +53,8 @@ static struct bitmap *swapmap;	// swap allocation map
 static struct lock *swaplock;	// synchronizes swapmap and counters
 
 
-static unsigned long swap_total_pages;				/*numero totale di pagine*/
-static unsigned long swap_free_pages;				/*contiene il numero di pagine libere che quindi posso caricare all'interno dello swap file*/
+static unsigned long swap_total_pages;				/*total pages number*/
+static unsigned long swap_free_pages;				/*its contents give us information about free pages into the swapfile*/
 
 
 static struct vnode *swapstore;	// swap file
@@ -85,7 +85,7 @@ swap_bootstrap(void)
 	kmalloc(sizeof(swappage_trace));   /*non so se devo farlo*/
 
 	strcpy(path, swapfilename);
-	rv = vfs_open(path, O_RDWR, 0, &swapstore); 				//crea un file di nome <path>
+	rv = vfs_open(path, O_RDWR, 0, &swapstore); 				//it creates a file named <path>
 	if (rv) {
 		kprintf("swap: Error %d opening swapfile %s\n", rv, 
 			swapfilename);
@@ -94,10 +94,10 @@ swap_bootstrap(void)
 	}
 
 
-	VOP_STAT(swapstore, &st);										/*Torna le info del file creato*/
+	VOP_STAT(swapstore, &st);		/*info about the created file*/
 	
 
-	if (st.st_size < SWAP_SIZE) {												/*st.st_size è la dimensione del file creato*/									
+	if (st.st_size < SWAP_SIZE) {						/*st.st_size is the size of the created swapfile*/									
 		kprintf("swap: swapfile %s is only %lu bytes.\n", swapfilename,
 			(unsigned long) st.st_size);
 		kprintf("swap: Please extend it.\n");
@@ -112,10 +112,10 @@ swap_bootstrap(void)
 	kprintf("swap: Total number of possible loaded pages into the file: %lu\n",
 		(unsigned long) SWAP_SIZE / PAGE_SIZE);
 
-	swap_total_pages = SWAP_SIZE / PAGE_SIZE;				/*numero totale di pagine*/
+	swap_total_pages = SWAP_SIZE / PAGE_SIZE;				/*total pages number available into swapfile*/
 	swap_free_pages = swap_total_pages;
 
-	swapmap = bitmap_create(swap_total_pages);					/*creo una mappa per il mio file utile alla ricerca delle pagine*/
+	swapmap = bitmap_create(swap_total_pages);					/*it creates a map of the file useful for searching pages*/
 	DEBUG(DB_VM, "creating swap map with %lld entries\n",
 			swap_total_pages);
 	if (swapmap == NULL) {
@@ -128,7 +128,7 @@ swap_bootstrap(void)
 	}
 
 	/* mark the first page of swap used so we can check for errors */
-	//bitmap_mark(swapmap, 0);											/*MARCO LA PAGINA 0. CAPIRE SE NECESSARIO FARLO*/
+	//bitmap_mark(swapmap, 0);						/*Marks the page 0. i don't know if it is necessary*/
 	//swap_free_pages--;
 }
 
@@ -151,23 +151,23 @@ swap_shutdown(void)
  * Synchronization: uses swaplock.
  */
 
-/*questa funzione devo chiamarla ogni volta che voglio fare uno swap out quindi scrivere sul file*/
+/*this function is called every time that a new page into the swapfile must be added*/
 off_t
-swap_alloc(paddr_t pa_mem)		/*alloca una pagina sul vettore di mappa*/
+swap_alloc(paddr_t pa_mem)		/*it allocates a page on the map vector*/
 {
 	uint32_t rv, index;
 	swappage_trace *p;
 	
 	lock_acquire(swaplock);
 
-	/*faccio dei controlli per assicurarmi che posso allocare la pagina nel file*/
+	/*check*/
 	KASSERT(swap_free_pages <= swap_total_pages);
 	KASSERT(swap_reserved_pages <= swap_free_pages);
 
 	KASSERT(swap_reserved_pages>0);
 	KASSERT(swap_free_pages>0);
 
-	rv = bitmap_alloc(swapmap, &index);					/*trova il bit libero, lo setta e ritorna il suo indice*/
+	rv = bitmap_alloc(swapmap, &index);					/*it finds the free bit and set it.*/
 	KASSERT(rv == 0);
 
 	/*associo al p_addr l'index di allocazione associato*/
@@ -180,7 +180,7 @@ swap_alloc(paddr_t pa_mem)		/*alloca una pagina sul vettore di mappa*/
 
 	lock_release(swaplock);
 
-	return index*PAGE_SIZE;		/*ritorna l'indirizzo di allocazione della pagina*/
+	return index*PAGE_SIZE;		/*page allocation address*/
 }
 
 
@@ -189,8 +189,8 @@ swap_alloc(paddr_t pa_mem)		/*alloca una pagina sul vettore di mappa*/
  *
  * Synchronization: uses swaplock.
  */
-void							/*questa funzione la uso tutte le volte che voglio fare un POP dallo swap file*/
-swap_free(off_t swapaddr)		/*swapaddr è l'indirizzo della page sullo swap file che voglio liberare*/
+void							/*i need it every time POP operation from the swapfile must be done*/
+swap_free(off_t swapaddr)		/*swapaddr is the address of the page into the swapfile*/
 {
 	uint32_t index;
 
@@ -205,9 +205,9 @@ swap_free(off_t swapaddr)		/*swapaddr è l'indirizzo della page sullo swap file 
 	KASSERT(swap_reserved_pages <= swap_free_pages);
 
 	KASSERT(bitmap_isset(swapmap, index));
-	bitmap_unmark(swapmap, index);					/*vado ad assegnare 0 in corrispondenza di index per 
-												contrassegnare una page libera. il file di swap non lo libero
-												ma lo sovrascrivo quando è necessario*/
+	bitmap_unmark(swapmap, index);					/*I'm going to meet 0 in correspondence of index for		
+							mark a free page. the swap file does not free it
+							but I overwrite it when necessary*/
 	swap_free_pages++;
 
 	lock_release(swaplock);
@@ -220,20 +220,20 @@ swap_free(off_t swapaddr)		/*swapaddr è l'indirizzo della page sullo swap file 
  * marked "pinned" (locked) so it won't be touched by other people.
  */
 static
-void																				/*pa_mem è l'indirizzo d'inizio del frame in memoria*/
-swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*funzione responsabile sia dello swapIN che swapOUT a seconda del flag passato come terzo parametro (UIO_READ oppure UIO_WRITE)*/
+void																				/*pa_mem is the starting address of the frame in memory*/
+swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*function responsible for both swapIN and swapOUT depending on the flag passed as third parameter (UIO_READ or UIO_WRITE)*/
 {
 	struct iovec iov;
 	struct uio myuio;
 	vaddr_t va;
 	int result;
 
-	iov.iov_ubase = (userptr_t)pa_mem;//vaddr;	/*indirizzo di partenza in memoria del frame che si estende da vaddr fino a vaddr+memsize*/
+	iov.iov_ubase = (userptr_t)pa_mem;//vaddr;	/*starting address in memory of the frame extending from vaddr up to vaddr + memsize*/
         iov.iov_len = PAGE_SIZE;           // length of the memory space
         myuio.uio_iov = &iov;
         myuio.uio_iovcnt = 1;
         myuio.uio_resid = PAGE_SIZE;          // amount to read from the file
-        myuio.uio_offset = swapaddr;		//dove si trova sul file la mia pagina (indirizzo di partenza) ed ha lunghezza resid (PAGE_SIZE)
+        myuio.uio_offset = swapaddr;		//where my page is on the file (starting address) and has resid length (PAGE_SIZE)
         myuio.uio_segflg = is_executable ? UIO_USERISPACE : UIO_USERSPACE;
         myuio.uio_rw = rw;
         myuio.uio_space = as;						/*DA CAPIRE MEGLIO*/
@@ -241,12 +241,12 @@ swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/
 
 	KASSERT(pa_mem != INVALID_PADDR);
 	KASSERT(swapaddr % PAGE_SIZE == 0);
-	KASSERT(bitmap_isset(swapmap, swapaddr / PAGE_SIZE));		/*controlla se effettivamente il bit del vettore che corrisponde all'indice della pagina che sto cercando nello swap sia effettivamente pieno e quindi la pagina presente nello swap file*/
+	KASSERT(bitmap_isset(swapmap, swapaddr / PAGE_SIZE));		/*check if actually the bit of the vector that corresponds to the index of the page I am looking for in the swap is actually full and therefore the page present in the swap file*/
 
 
 	uio_kinit(&iov, &myuio, (char *)va, PAGE_SIZE, swapaddr, rw);
 	if (rw==UIO_READ) {
-		result = VOP_READ(swapstore, &myuio); //leggo dallo swap file e metto in memoria
+		result = VOP_READ(swapstore, &myuio); //I read from the swap file and put in memory
 	
 	}
 	else {
@@ -255,15 +255,15 @@ swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/
 	}
 
 
-	if (result==EIO) {										/*si è verificato un errore di lettura */
+	if (result==EIO) {										/*reading error */
 		panic("swap: EIO on swapfile (offset %ld)\n",
 		      (long)swapaddr);
 	}
-	else if (result==EINVAL) {								/*tentativo di lettura da un offset non corretto, illegale*/
+	else if (result==EINVAL) {								/*attempting to read from an incorrect, illegal offset*/
 		panic("swap: EINVAL from swapfile (offset %ld)\n",
 		      (long)swapaddr);
 	}
-	else if (result) {										/*errore generico di lettura/scrittura*/
+	else if (result) {										/*generic read / write error*/
 		panic("swap: Error %d from swapfile (offset %ld)\n",
 		      result, (long)swapaddr);
 	}
