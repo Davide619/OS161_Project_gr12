@@ -40,7 +40,7 @@
 #include <mainbus.h>
 #include <addrspace.h>
 #include <vm.h>
-#include <vmprivate.h>
+#include <swapfile.h>
 #include <machine/coremap.h>
 #include <vfs.h>
 #include <vnode.h>
@@ -68,7 +68,7 @@ static struct vnode *swapstore;	// swap file
  */
 
 typedef struct st_t{
-	p_addr addr[SWAP_SIZE / PAGE_SIZE];
+	p_addr *addr[SWAP_SIZE / PAGE_SIZE];
 	off_t offset_swapfile[SWAP_SIZE / PAGE_SIZE];
 	int s;
 }swappage_trace;
@@ -170,7 +170,7 @@ swap_alloc(paddr_t pa_mem)		/*it allocates a page on the map vector*/
 	rv = bitmap_alloc(swapmap, &index);					/*it finds the free bit and set it.*/
 	KASSERT(rv == 0);
 
-	/*associo al p_addr l'index di allocazione associato*/
+	/*initialization of the structure that keeps data information trace of swapfile*/
 	p->addr[p->s] = pa_mem;
 	p->offset_swapfile[p->s] = index*PAGE_SIZE;
 
