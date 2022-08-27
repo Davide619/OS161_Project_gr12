@@ -48,6 +48,12 @@
 /* Initialization function */
 void vm_bootstrap(void);
 
+/* Initialization for swapfile */
+void swap_bootstrap(void);
+
+/* Shutdown function for swapfile; closes swap vnode. */
+void swap_shutdown(void);
+
 /* Fault handling function called by trap code */
 int vm_fault(int faulttype, vaddr_t faultaddress);          
 
