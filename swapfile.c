@@ -60,6 +60,8 @@ static unsigned long swap_free_pages;				/*its contents give us information abou
 static struct vnode *swapstore;	// swap file
 
 
+static unsigned long index_paddr =0;  /*variable to keep trace of phisical address vector of swappage_trace*/
+
 //struct lock *global_paging_lock;
 
 
@@ -70,7 +72,6 @@ static struct vnode *swapstore;	// swap file
 typedef struct st_t{
 	p_addr *addr[SWAP_SIZE / PAGE_SIZE];
 	off_t offset_swapfile[SWAP_SIZE / PAGE_SIZE];
-	int s;
 }swappage_trace;
 
 
@@ -171,10 +172,8 @@ swap_alloc(paddr_t pa_mem)		/*it allocates a page on the map vector*/
 	KASSERT(rv == 0);
 
 	/*initialization of the structure that keeps data information trace of swapfile*/
-	p->addr[p->s] = pa_mem;
-	p->offset_swapfile[p->s] = index*PAGE_SIZE;
-
-	p->s = p->s + 1;
+	p->addr[index_paddr] = pa_mem;
+	p->offset_swapfile[index_paddr] = index*PAGE_SIZE;
 
 	swap_free_pages--;
 
