@@ -190,8 +190,9 @@ swap_alloc(paddr_t pa_mem)		/*it allocates a page on the map vector*/
  *
  * Synchronization: uses swaplock.
  */
-void							/*i need it every time POP operation from the swapfile must be done*/
-swap_free(off_t swapaddr)		/*swapaddr is the address of the page into the swapfile*/
+void					/*i need it every time POP operation from the swapfile must be done*/
+swap_free(off_t swapaddr)		/*swapaddr is the address of the page into the swapfile that is offset_swapfile[index_paddr]
+					that corresponds to index*PAGE_SIZE */
 {
 	uint32_t index;
 
