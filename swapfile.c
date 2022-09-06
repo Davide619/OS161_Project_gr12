@@ -174,6 +174,8 @@ swap_alloc(paddr_t pa_mem)		/*it allocates a page on the map vector*/
 	/*initialization of the structure that keeps data information trace of swapfile*/
 	p->addr[index_paddr] = pa_mem;
 	p->offset_swapfile[index_paddr] = index*PAGE_SIZE;
+	
+	index_paddr++;
 
 	swap_free_pages--;
 
