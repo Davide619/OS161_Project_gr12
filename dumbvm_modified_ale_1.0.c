@@ -40,7 +40,7 @@
 #include <addrspace.h>
 #include <vm.h>
 #include <pt.h>
-#include <unistd.h>		/*<------------------ added for using kill function*/
+//#include <unistd.h>		/*<------------------ added for using kill function*/
 
 #define DUMBVM_STACKPAGES    18         /*lo stack ha un numero di pagine fisse*/
 
@@ -239,32 +239,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) //TLB MISS HANDLER: quando si 
 
         faultaddress &= PAGE_FRAME; //Tramite la maschera con la PAGE_FRAME(=0xfffff000) estraggo il page number,che è l'address che non è stato
         //trovato nelle entry della TLB. 
-        pid_process = sys_getpid();   // <-------------- added  
-
-        /***********************************************************************************************************************/
-
-        /*funzione da scrivere in OS161/kern/syscall/ */
-        /*nome del file da associare getpid.c*/
-        /*
-                #include <types.h>
-		#include <lib.h>
-		#include <proc.h>
-		#include <thread.h>
-		#include <current.h>
-		#include <syscall.h>
-
-		int sys_getpid( int *retval ) {
-			KASSERT( curthread != NULL );
-			KASSERT( curthread->td_proc != NULL );
-	
-			PROC_LOCK( curthread->td_proc );
-			*retval = curthread->td_proc->p_pid;                 //curproc è il processo corrente, curthread il thread corrente
-			PROC_UNLOCK( curthread->td_proc );
-
-			return 0;
-		}
-        */
-        /***********************************************************************************************************************/                                             
+                                     
 
         DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
@@ -272,9 +247,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress) //TLB MISS HANDLER: quando si 
             case VM_FAULT_READONLY:   
                /*terminate process using PID*/  
                /*posso usare KASSERT che termina il processo se la condizione nelle parentesi è falsa*/
-                kill(pid_process); // <-------------- added 	non sono sicuro che sia conosciuta a os161 questa funzione, alternativa _exit
-                //continue;
-                panic("dumbvm: got VM_FAULT_READONLY\n");    
+               sys__exit(); // <-------------- added
+               //continue;
+               panic("dumbvm: got VM_FAULT_READONLY\n");  
+			
             case VM_FAULT_READ:                                 
 
 
