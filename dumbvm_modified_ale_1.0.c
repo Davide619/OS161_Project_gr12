@@ -247,7 +247,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress) //TLB MISS HANDLER: quando si 
             case VM_FAULT_READONLY:   
                /*terminate process using PID*/  
                /*posso usare KASSERT che termina il processo se la condizione nelle parentesi è falsa*/
-               sys__exit(); // <-------------- added
+               sys__exit(0); // <-------------- added
                //continue;
                panic("dumbvm: got VM_FAULT_READONLY\n");  
 			
