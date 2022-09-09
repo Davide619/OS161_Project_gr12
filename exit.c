@@ -1,12 +1,13 @@
-
 #include <types.h>
 #include <lib.h>
 #include <proc.h>
-#include <file.h>
-#include <filedesc.h>
 #include <thread.h>
 #include <current.h>
 #include <syscall.h>
+#include <kern/unistd.h>
+#include <kern/wait.h>
+#include <addrspace.h>
+#include <copyinout.h>
 
 
 int sys__exit(int status) {
