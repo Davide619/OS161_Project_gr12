@@ -5,13 +5,12 @@
 #define N 12 //20
 int cont = 0;
 int page_faults=0;
-
+int *time;
 bool present;
 int enable_control = 0;
 int PR_FIFO_Algorithm(int stack[],int num_pages,int data);
-void PR_LRU_Algorithm(int stack[],int num_pages,int page_number);
-//void push_page(int top,int stack[],int element);
-//int pop_page(int top,int stack[]);
+int PR_LRU_Algorithm(int stack[],int num_pages,int ref_string[],int string_len,int time[]);
+
 
 int main()
 {
@@ -19,7 +18,7 @@ int main()
     int ref_sequence[N]={1,2,3,4,1,2,5,1,2,3,4,5};
     int num_pages=4,Tot_page_faults;
     int stack[num_pages];
-    
+
     for(int i=0;i<N;i++) Tot_page_faults = PR_FIFO_Algorithm(stack,num_pages,ref_sequence[i]);
 
     printf("Tot delle page faults: %d",Tot_page_faults);
@@ -27,21 +26,6 @@ int main()
 }
 
 
-/*void push_page(int top,int stack[],int value)
-{
-    top++;
-    stack[top] = value;
-    printf("%d, ", stack[top]);
-
-}
-
-
-int pop_page(int top,int stack[])
-{
-    int value = stack[top];
-    top--;
-    return value;
-}*/
 
 int PR_FIFO_Algorithm(int stack[],int num_pages,int page_number)
 {
@@ -80,8 +64,32 @@ int PR_FIFO_Algorithm(int stack[],int num_pages,int page_number)
 
 }
 
-void PR_LRU_Algorithm(int stack[],int num_pages,int page_number)
+int PR_LRU_Algorithm(int stack[],int num_pages,int ref_string[],int string_len,int time[])
 {
+    for(int i=0;i<string_len;i++) {
+        if(cont==num_pages)
+        {
+            enable_control = 1;
+            cont = 0;
+        }
+        if(enable_control)
+        {
+            for(int j=0;j<num_pages;j++) {
+                if (stack[j] != ref_string[i]) present = 0;
+                else {
+                    present = 1;
+                    break;
+                }
+            }
+        }
+        if (!present) {
+            stack[cont] = ref_string[i];
+            printf("stack[%d]:%d \n", cont, stack[cont]);
+            page_faults++;
+            cont++;
+        }
+    }
+
 
 
 }
