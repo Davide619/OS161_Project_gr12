@@ -144,7 +144,7 @@ int PR_EN_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_
             if(cont==num_pages) //Se ho riempito un numero di frame in memoria pari al numero totale di frame inseribili nello stack azzero tutti i ref bit 
                 for(int i=0;i<num_pages;i++) {
                     ref_bit[i] = 0b0;
-                    state_bits[i] = (ref_bit[i] << 1) | modify_bit;
+                    state_bits[i] = (ref_bit[i] << 1) & 0b11; //modifico solo ref bit dei frame
                     cont=0;
                 }
 
@@ -160,7 +160,10 @@ int PR_EN_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_
                     cont ++;
                     break;
                 }
-                else if(state_bits[i]==0b01)//Cerco la pagina in memoria con sequenza 01
+            }
+            for(int i=0;i<num_pages;i++)
+            {
+                if(state_bits[i]==0b01)//Cerco la pagina in memoria con sequenza 01
                 {
                     stack[i] = page_number;
                     ref_bit[i] = 0b1;
@@ -170,11 +173,9 @@ int PR_EN_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_
                     state = 1;
                     break;
                 }
-                else internal_cont++;
 
             }
-            if(internal_cont == num_pages) {state=1;internal_cont = 0;break;} //Se non trovo ne pagine con 00,ne con 01 torno allo stato 1,perchè i casi 10 e 11 sono
-            //i peggiori da scegliere
+            
 
     }
 
