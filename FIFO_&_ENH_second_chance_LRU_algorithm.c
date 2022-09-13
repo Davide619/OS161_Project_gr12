@@ -3,33 +3,34 @@
 #include <string.h>
 #include <malloc.h>
 
-#define N 16 //12 //20
-int cont = 0,internal_cont=0,initial_counter=0;
-int state=0;
-int page_faults=0;
-bool present;
-int enable_control = 0;
+#define N 17 //12 //20
 int PR_FIFO_Algorithm(int stack[],int num_pages,int page_number);
-int PR_EN_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_bit);
+int PR_ENH_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_bit,int state_bits[],int ref_bit[]);
 
+int cont = 0,internal_cont=0,state=0,page_faults=0,enable_control = 0,num_pages=3;
+bool present;
 
 int main()
 {
     //int ref_sequence[N]={7,0,1,2,0,3,0,4,2,3,0,3,2,1,2,0,1,7,0,1};
     //int ref_sequence[N]={1,2,3,4,1,2,5,1,2,3,4,5};
-    int ref_sequence[N]={0,1,3,6,4,5,2,5,0,2,3,1,2,5,4,2};
-    int dirty_bit_vect[N];
-    int num_pages=3,Tot_page_faults;
-    //int stack[num_pages];
+    int ref_sequence[N]={0,1,3,6,2,4,5,2,5,0,2,3,1,2,5,4,2};
+    int dirty_bit[N]={0,1,0,1,0,0,1,0,0,1,0,1,0,1,0,0,0};
+    int Tot_page_faults;
     int *stack = (int *)malloc(sizeof(int)*num_pages);
+    int *state_bits = (int *)malloc(sizeof(int)*num_pages);
+    int *ref_bit = (int *)malloc(sizeof(int)*num_pages);
+
     size_t n;
+
+    for (int m = 0; m < num_pages; m++) {state_bits[m] = 0b00; ref_bit[m]= 0b0;}//Inizializzo vettore stati coppie bit e reference bit
 
     for(int i=0;i<N;i++)
     {
-        Tot_page_faults = PR_FIFO_Algorithm(stack,num_pages,ref_sequence[i]);
-        //Tot_page_faults = PR_EN_LRU_SC_Algorithm(stack,num_pages,ref_sequence[i],dirty_bit_vect[i]);
+        //Tot_page_faults = PR_FIFO_Algorithm(stack,num_pages,ref_sequence[i]);
+        Tot_page_faults = PR_ENH_LRU_SC_Algorithm(stack,num_pages,ref_sequence[i],dirty_bit[i],state_bits,ref_bit);
         //n=sizeof(stack)/sizeof(stack[0]);
-        printf("ref page: %d --> ",ref_sequence[i]);
+        printf("ref page: %d ,modify bit: %d --> ",ref_sequence[i],dirty_bit[i]);
         for(int j=0;j<num_pages;j++)
         {
             printf("stack[%d]:%d, ",j,stack[j]);
@@ -90,29 +91,20 @@ int PR_FIFO_Algorithm(int stack[],int num_pages,int page_number)
 
 }
 
-int PR_EN_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_bit)
+int PR_ENH_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_bit,int state_bits[],int ref_bit[])
 {
-
-    int state_bits[num_pages];
-    int ref_bit[num_pages];
-    for(int m=0;m<num_pages;m++) //Inizializzo vettore stati coppie bit
-    {
-        state_bits[m] = 0b00;
-        ref_bit[m]=0b0;
-    }
 
     switch(state)
     {
-
         case 0://STATO RIEMPIMENTO INIZIALE
 
             stack[cont] = page_number;
             ref_bit[cont] = 0b1;
-            state_bits[cont] = (0b1 << 1) | modify_bit;
+            state_bits[cont] = (ref_bit[cont] << 1) | modify_bit;
             page_faults++;
             cont++;
             if(cont==num_pages) {state=1;cont = 0;}
-        break;
+            break;
         case 1: //STATO PRIMA RICERCA,CERCO coppia 00
             for(int i=0;i<num_pages;i++) //Cerco se la pagina è già in memoria prima di rimpiazzarla--->NO PAGE FAULT
             {
@@ -141,7 +133,7 @@ int PR_EN_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_
 
         default: //STATO SECONDA RICERCA,CERCO coppia 01,azzero tutti i ref bit delle page che analizzo nel frattempo
 
-            if(cont==num_pages) //Se ho riempito un numero di frame in memoria pari al numero totale di frame inseribili nello stack azzero tutti i ref bit 
+            if(cont==num_pages) //Se ho riempito un numero di frame in memoria pari al numero totale di frame inseribili nello stack azzero tutti i ref bit
                 for(int i=0;i<num_pages;i++) {
                     ref_bit[i] = 0b0;
                     state_bits[i] = (ref_bit[i] << 1) & 0b11; //modifico solo ref bit dei frame
@@ -175,7 +167,7 @@ int PR_EN_LRU_SC_Algorithm(int stack[],int num_pages,int page_number,int modify_
                 }
 
             }
-            
+
 
     }
 
