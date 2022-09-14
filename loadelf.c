@@ -218,10 +218,9 @@ load_elf(struct vnode *v, vaddr_t *entrypoint)
                 }
         }
         
-        //page_table_entries=as->as.npages1+as->as.npages2+DUMBVMSTACKPAGES;
-        //struct pt * pt_create(page_table_entries);
+        
   
-        result = as_prepare_load(as);                                                   /* <------ viene chiamata per settare tutte le regioni di memoria come writeable*/ 
+        result = as_prepare_load(as);         /* <------ viene chiamata per settare tutte le regioni di memoria come writeable*/ 
         if (result) {
                 return result;
         }
