@@ -34,7 +34,7 @@ void 		swap_pageout(struct addrspace *as, paddr_t pa_mem, off_t swapaddr);
  *   INVALID_SWAPADDR is an invalid swap address.
  */
 #define INVALID_SWAPADDR	(0)
-#define SWAP_SIZE 9216
+#define SWAP_SIZE 9437184 /*Byte      9M*1024B*1024B*/
 
 
 //extern struct lock *global_paging_lock;
