@@ -70,7 +70,7 @@ static unsigned long index_paddr =0;  /*variable to keep trace of phisical addre
  */
 
 typedef struct st_t{
-	p_addr *addr[SWAP_SIZE / PAGE_SIZE];
+	paddr_t *addr[SWAP_SIZE / PAGE_SIZE];
 	off_t offset_swapfile[SWAP_SIZE / PAGE_SIZE];
 }swappage_trace;
 
@@ -163,9 +163,7 @@ swap_alloc(paddr_t pa_mem)		/*it allocates a page on the map vector*/
 
 	/*check*/
 	KASSERT(swap_free_pages <= swap_total_pages);
-	KASSERT(swap_reserved_pages <= swap_free_pages);
 
-	KASSERT(swap_reserved_pages>0);
 	KASSERT(swap_free_pages>0);
 
 	rv = bitmap_alloc(swapmap, &index);					/*it finds the free bit and set it.*/
@@ -204,7 +202,6 @@ swap_free(off_t swapaddr)		/*swapaddr is the address of the page into the swapfi
 	lock_acquire(swaplock);
 
 	KASSERT(swap_free_pages < swap_total_pages);
-	KASSERT(swap_reserved_pages <= swap_free_pages);
 
 	KASSERT(bitmap_isset(swapmap, index));
 	bitmap_unmark(swapmap, index);					/*I'm going to meet 0 in correspondence of index for		
