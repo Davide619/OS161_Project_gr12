@@ -41,13 +41,13 @@ La getppage a sua volta deve controllare se vi sono frame liberi partendo dall'a
 
 # WILLIAM
 
-<b>parametro entrypoint:</b>
+<b>parametro entrypoint:</b> <br>
 è necessario vedere in runprogram e loadelf qual è il comportamento di "entrypoint", in teoria dovrebbe essere un indirizzo specificato da noi che viene passato al program counter e che rappresenta l'indirizzo della prima istruzione da caricare in memoria.
 
-<b>gestione allocatore/deallocatore:</b>
+<b>gestione allocatore/deallocatore:</b> <br>
 è necessario valutare il comportamento delle funzioni che si occuperanno di allocare effettivamente della memoria fisica riservandola per qualunque struttura/frame sia necessaria ad un certo processo.
 L'allocatore può essere strutturato in maniera molto simile a ram_stealmem, tuttavia va considerato che se alloco memoria per proc.a e di seguito un'altra porzione per proc.b, se proc.a finisce l'esecuzione prima di proc.b, mi ritrovo a dover deallocare la porzione di memoria di proc.a, mentre proc.b è ancora in esecuzione: questo crea un buco di locazioni che sono potenzialmente libere e occupabili, e ho bisogno di una opportuna struttura dati che gestisca e tenga traccia delle 
 porzioni di memoria che si liberano.
 
-<b>vaddr relativo alle istruzioni:</b>
+<b>vaddr relativo alle istruzioni:</b> <br>
 è necessario cercare la porzione di codice che fornisce al sistema VM l'indirizzo virtuale relativo alle istruzioni a cui il programma in esecuzione cerca di fare accesso.
