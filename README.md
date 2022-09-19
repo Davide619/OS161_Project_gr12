@@ -27,10 +27,10 @@ Questa funzione,dati i due virtual address dei segmenti e le memsize,definisce l
 	
 	3.1. Dopo aver verificato che gli indirizzi fisici siano tutti nulli(da controllare questa cosa),vengono aggiornati con gli indirizzi della page in memoria corrispondenti che vogliamo allocare chiamando la funzione getppages(vaddr_t vaddr);
 		
-<b>Funzione getppage(vaddr_t vaddr):</b>
-Questa funzione si occupa di fornire l'indirizzo della pagina corrispondente al virtual address dato e allocare quella pagina in memoria chiamando al suo interno la funzione ram_stealmem(paddr_t firstpaddr1);(*ATTENZIONE*:se siamo in fase di inizializzazione della virtual memory come adesso,ha senso usare la ram_stealmem.Dopo quindi la fase di inizializzazione dovremo trovare un altro meccanismo per allocare memoria).
+<b>Funzione getppage(unsigned long npages):</b>
+Questa funzione si occupa di fornire l'indirizzo della pagina fisica in memoria richiamando al suo interno la funzione ram_stealmem()(*ATTENZIONE*:se siamo in fase di inizializzazione della virtual memory come adesso,ha senso usare la ram_stealmem.Dopo quindi la fase di inizializzazione dovremo trovare un altro meccanismo per allocare memoria).
 		
-La getppage a sua volta deve controllare se vi sono frame liberi partendo dall'address virtuale dato,per fare cio si serve della getfreepages();(essa ritorna l'indirizzo del primo frame libero dopo l'indirizzo fisico corrispondente a quello virtuale dato). Se la getppage non trova frame liberi dovra adottare una politica di page replacement per trovarne uno da utilizzare.
+La getppage a sua volta deve controllare se vi sono frame liberi,per fare cio si serve della getfreepages();(essa ritorna l'indirizzo del primo frame libero dopo l'indirizzo fisico). Se la getppage non trova frame liberi dovra adottare una politica di page replacement per trovarne uno da utilizzare.
 		
 4. Adesso,con il secondo for carico effettivamente i segmenti in memoria. Dopo aver letto nuovamente i dati dell'elf file dall'header eseguibile richiamo la funzione load_segment();
 	
