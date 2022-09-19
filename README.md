@@ -4,7 +4,7 @@
 1. tale codice richiama LOADELF.C
 
 <b>LOADELF.C:</b>
-1. la funzione load_elf() chiama due cicli for. l'indice dei cicli va da i=0 ad e_phnum. Quest'ultimo si riferisce al program header number che tipicamente per os161 è 3 che significa che l'elf file ha potenzialmente tre header quindi 3 sezioni ma solo due di loro sono usate per prendere informazioni. Infatti nell' iterazione 0 non viene preso niente quindi la sezione 0 non viene presa ma viene presa la sezione 1 e 2 che corrisponde a prendere all'interno dell elf file solo le informazioni relative al segmento dato e al segmento codice.
+1. la funzione load_elf() chiama due cicli for. l'indice dei cicli va da i=0 ad e_phnum. Quest'ultimo si riferisce al program header number che tipicamente per os161 è 3 che significa che l'elf file ha potenzialmente tre header quindi 3 sezioni ma solo due di loro sono usate per prendere informazioni. Infatti nell' iterazione 0 non viene preso niente quindi la sezione 0 non viene presa ma viene presa la sezione 1 e 2 che corrisponde a prendere all'interno dell elf file solo le informazioni relative al segmento dato e al segmento codice. Questo perchè la sezione 0 riguarda il segmento di reginfo che non ha a che fare con i segmenti importanti per la memorizzazione dei dati e del codice in memoria. Inoltre non viene considerato il segmento di stack perchè per come è implementato il tutto assumiamo che lo stack abbia un numero di pagine predefinito e fisso(18) e che non cambi con il cambiare del programma e/o processo che si esegue,quindi esso non viene specificato nel file elf per questo.
 
 2. il primo ciclo for prepara lo spazio di memoria ad ospitare i segmenti attraverso la funzione as_define_region(). Questo ciclo infatti ha il compito di leggere dal elf file gli header dato e codice ed associare ad essi i rispettivi indirizzi dei segmenti codice e dato. Nella pratica setta as_vbase1, as_vbase2, as_npages1, as_npages2. Riserva dello spazio CONTIGUO per il segmento dato e codice. 
 Finito questo ciclo viene chiamata la funzione as_prepare_load(as) che alloca tutta la memoria fisica necessaria per quello spazio logico degli indirizzi.
@@ -30,7 +30,7 @@ Questa funzione,dati i due virtual address dei segmenti e le memsize,definisce l
 <b>Funzione getppage(unsigned long npages):</b>
 Questa funzione si occupa di fornire l'indirizzo della pagina fisica in memoria richiamando al suo interno la funzione ram_stealmem()(*ATTENZIONE*:se siamo in fase di inizializzazione della virtual memory come adesso,ha senso usare la ram_stealmem.Dopo quindi la fase di inizializzazione dovremo trovare un altro meccanismo per allocare memoria).
 		
-La getppage a sua volta deve controllare se vi sono frame liberi,per fare cio si serve della getfreepages();(essa ritorna l'indirizzo del primo frame libero dopo l'indirizzo fisico). Se la getppage non trova frame liberi dovra adottare una politica di page replacement per trovarne uno da utilizzare.
+La getppage a sua volta deve controllare se vi sono frame liberi,per fare cio si serve della getfreepages();(essa ritorna l'indirizzo del primo frame libero dopo l'indirizzo fisico restituito da ram_stealmem()). Se la getppage non trova frame liberi dovra adottare una politica di page replacement per trovarne uno da utilizzare.
 		
 4. Adesso,con il secondo for carico effettivamente i segmenti in memoria. Dopo aver letto nuovamente i dati dell'elf file dall'header eseguibile richiamo la funzione load_segment();
 	
