@@ -1,4 +1,4 @@
-(DAVIDE)
+# DAVIDE
 
 	RUNPROGRAM.C:
 	tale codice richiama LOADELF.C
@@ -18,8 +18,7 @@
 	il secondo ciclo for rilegge nuovamente l'header dato e codice dall'elf file e avendo già definito la regione di memoria al ciclo for 
 	precedente, carica ciasun segmento nella locazione opportuna.
 
-
-(ALESSANDRO)
+# ALESSANDRO
 
 	Struttura del debug partendo dal loadelf.c:
 	Funzione int load_elf():questa funzione carica un user program elf file nell'address space del processo attuale e ritorna l'entry point,
@@ -60,7 +59,7 @@
 	6)Ritorno l'entry point 
 
 
-(WILLIAM)
+# WILLIAM
 
 	- parametro entrypoint: è necessario vedere in runprogram e loadelf qual è il comportamento di "entrypoint", in teoria 
   	  dovrebbe essere un indirizzo specificato da noi che viene passato al program counter e che rappresenta l'indirizzo della
