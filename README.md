@@ -25,7 +25,7 @@ Con uio_kinit(...); leggo l'header eseguibile partendo da un offset per il file 
 Funzione as_define_region(as,....,...,..):
 Questa funzione,dati i due virtual address dei segmenti e le memsize,definisce le zone della RAM in cui posizionarli e quanti frame conterranno in totale,allocabili.
 	
-3.1. Dopo aver verificato che gli indirizzi fisici siano tutti nulli(da controllare questa cosa),vengono aggiornati con gli indirizzi della page in memoria corrispondenti che vogliamo allocare chiamando la funzione getppages(vaddr_t vaddr);
+	3.1. Dopo aver verificato che gli indirizzi fisici siano tutti nulli(da controllare questa cosa),vengono aggiornati con gli indirizzi della page in memoria corrispondenti che vogliamo allocare chiamando la funzione getppages(vaddr_t vaddr);
 		
 <b>Funzione getppage(vaddr_t vaddr):</b>
 Questa funzione si occupa di fornire l'indirizzo della pagina corrispondente al virtual address dato e allocare quella pagina in memoria chiamando al suo interno la funzione ram_stealmem(paddr_t firstpaddr1);(*ATTENZIONE*:se siamo in fase di inizializzazione della virtual memory come adesso,ha senso usare la ram_stealmem.Dopo quindi la fase di inizializzazione dovremo trovare un altro meccanismo per allocare memoria).
