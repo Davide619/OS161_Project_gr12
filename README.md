@@ -2,7 +2,7 @@
 ## FILE MODIFICATI/GENERATI PER LO SWAP FILE ED EXIT:
 - swap.c (file generato)
 - swap.h (file generato)
-- src/kern/include/syscall/file_syscall.c
+- src/kern/syscall/file_syscall.c
 - src/kern/include/syscall.h
 - src/kern/arch/mips/syscall/syscall.c
 - src/kern/include/proc.h
