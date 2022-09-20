@@ -1,4 +1,19 @@
 # DAVIDE
+## FILE MODIFICATI/GENERATI PER LO SWAP FILE ED EXIT:
+- swap.c (file generato)
+- swap.h (file generato)
+- src/kern/include/syscall/file_syscall.c
+- src/kern/include/syscall.h
+- src/kern/arch/mips/syscall/syscall.c
+- src/kern/include/proc.h
+- src/kern/include/proc/proc.c
+- src/kern/include/thread.h
+- src/kern/include/thread/thread.c
+- root/sys161.conf
+- src/kern/arch/mips/conf/conf.arch
+- src/kern/conf/conf.kern
+- src/kern/conf/(nome del kernel generato)
+- src/kern/arch/mips/vm/dumbvm.c
 
 <b>RUNPROGRAM.C:</b>
 1. tale codice richiama LOADELF.C
