@@ -779,26 +779,41 @@ thread_startup(void (*entrypoint)(void *data1, unsigned long data2),
 void
 thread_exit(void)
 {
-	struct thread *cur;
+	/////////////////////////////START ADDED///////////////////////////////////////////////
+         struct thread *cur;
+ 
+         cur = curthread;
+ 
 
-	cur = curthread;
+         /* threads for user processes should have detached from their process
+            in sys__exit */
+         KASSERT(curproc == kproc || curproc == NULL);   
+         /* kernel threads don't go through sys__exit, so we detach them from kproc here */
+         if (curproc == kproc) {
+           proc_remthread(cur);
+         }
 
-	/*
-	 * Detach from our process. You might need to move this action
-	 * around, depending on how your wait/exit works.
-	 */
-	proc_remthread(cur);
+         proc_remthread(cur);
 
-	/* Make sure we *are* detached (move this only if you're sure!) */
-	KASSERT(cur->t_proc == NULL);
+ 
+         /* Make sure we *are* detached (move this only if you're sure!) */
+         KASSERT(cur->t_proc == NULL);
+ 
+         /* Check the stack guard band. */
+         thread_checkstack(cur);
+ 
+         /* Interrupts off on this processor */
+         splhigh();
+         thread_switch(S_ZOMBIE, NULL,NULL);
+         panic("The zombie walks!\n");
+	///////////////////////////////END ADDED///////////////////////////////////////////
+}
 
-	/* Check the stack guard band. */
-	thread_checkstack(cur);
 
-	/* Interrupts off on this processor */
-        splhigh();
-	thread_switch(S_ZOMBIE, NULL, NULL);
-	panic("braaaaaaaiiiiiiiiiiinssssss\n");
+
+
+
+	
 }
 
 /*
