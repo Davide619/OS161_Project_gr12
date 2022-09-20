@@ -6,7 +6,7 @@
 - src/kern/include/syscall.h
 - src/kern/arch/mips/syscall/syscall.c
 - src/kern/include/proc.h
-- src/kern/include/proc/proc.c
+- src/kern/proc/proc.c
 - src/kern/include/thread.h
 - src/kern/include/thread/thread.c
 - root/sys161.conf
