@@ -9,9 +9,9 @@
 - src/kern/proc/proc.c
 - src/kern/include/thread.h
 - src/kern/thread/thread.c
-- root/sys161.conf
-- src/kern/arch/mips/conf/conf.arch
-- src/kern/conf/conf.kern
+- root/sys161.conf (per impostare ramsize)
+- src/kern/arch/mips/conf/conf.arch 
+- src/kern/conf/conf.kern (per aggiungere nuove syscall al kernel)
 - src/kern/conf/(nome del kernel generato)
 - src/kern/arch/mips/vm/dumbvm.c
 
