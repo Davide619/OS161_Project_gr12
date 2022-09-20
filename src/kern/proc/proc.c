@@ -318,3 +318,19 @@ proc_setas(struct addrspace *newas)
 	spinlock_release(&proc->p_lock);
 	return oldas;
 }
+//////////////////////////START ADDED/////////////////////////////////
+/* * Change the address space of the current process, and return the old
+*/
+ struct addrspace *
+ curproc_setas(struct addrspace *newas)
+ {
+         struct addrspace *oldas;
+         struct proc *proc = curproc;
+ 
+         spinlock_acquire(&proc->p_lock);
+         oldas = proc->p_addrspace;
+         proc->p_addrspace = newas;
+         spinlock_release(&proc->p_lock);
+         return oldas;
+ }
+ //////////////////////////////END ADDED/////////////////////////////////////////
