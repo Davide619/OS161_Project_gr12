@@ -107,6 +107,16 @@ struct thread {
 	 */
 
 	/* add more here as needed */
+	////////////////////ADDED/////////////////////////////////////////////////
+	/* VM */
+	struct addrspace *t_addrspace;	/* virtual address space */
+
+	/* VFS */
+	struct vnode *t_cwd;		/* current working directory */
+
+	/* add more here as needed */
+  	struct filetable *t_filetable;
+	/////////////////////////////////////////////////////////////////////////
 };
 
 /*
