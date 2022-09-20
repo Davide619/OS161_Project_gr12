@@ -40,14 +40,14 @@ La getppage a sua volta deve controllare se vi sono frame liberi,per fare cio si
 
 
 # WILLIAM
-##FILE MODIFICATI
+## FILE MODIFICATI
 - src/kern/arch/mips/vm/ram.c
 - src/kern/include/coremap.h
 - src/kern/vm/coremap.c
 - src/kern/include/pt.h
 - src/kern/vm/pt.c
 
-##APPUNTI
+## APPUNTI
 
 <b>parametro entrypoint:</b> <br>
 è necessario vedere in runprogram e loadelf qual è il comportamento di "entrypoint", in teoria dovrebbe essere un indirizzo specificato da noi che viene passato al program counter e che rappresenta l'indirizzo della prima istruzione da caricare in memoria.
