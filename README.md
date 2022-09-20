@@ -8,7 +8,7 @@
 - src/kern/include/proc.h
 - src/kern/proc/proc.c
 - src/kern/include/thread.h
-- src/kern/include/thread/thread.c
+- src/kern/thread/thread.c
 - root/sys161.conf
 - src/kern/arch/mips/conf/conf.arch
 - src/kern/conf/conf.kern
