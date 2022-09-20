@@ -38,11 +38,12 @@ vaddr_t firstfree;   /* first free virtual address; set by start.S */
 
 static paddr_t firstpaddr;  /* address of first free physical page */
 static paddr_t lastpaddr;   /* one past end of last free physical page */
-static size_t n_frames; /* amount of available RAM frames */
 
 static struct bitmap * frame_list; /* bitmap tracking free RAM frames */
 static uint8_t * frame_size; /* array related to bitmap, storing number of contiguous allocated frames */
 static paddr_t start_frame; /* reference frame address */
+static size_t n_frames; /* amount of available RAM frames */
+static uint8_t idx; /* current frame_list index */
 
 static bool vm_initialized = false; /* to start doing VM management after ram_bootstrap completed */
 
@@ -99,11 +100,9 @@ ram_bootstrap(void)
 	 * ...and mark the first page as allocated: we reserved space
 	 *	  for ram_manager vectors 
 	 */
-	bitmap_mark(frame_list, 0);
-	frame_size[0] = 1;
-	frame_size[1] = --n_frames;
-
-	/* serve memorizzare il numero di pagine libere? */
+	bitmap_mark(frame_list, idx);
+	frame_size[idx] = 1;
+	frame_size[++idx] = --n_frames;
 
 	/* finally, set vm_initialized: the VM sistem is ready */
 	vm_initialized = true;
@@ -147,19 +146,55 @@ ram_stealmem(unsigned long npages)
 	 * only if ram_bootstrap finished execution
 	 */ 
 	if(vm_initialized) {
+		/* mark the first page among the npages requested */
+		bitmap_mark(frame_list, idx);
+
+		/* set the number of pages requested */
+		frame_size[idx] = npages;
+
+		/* update idx/npages */
+		idx += npages; n_frames -= npages;
 		
+		/* save the available free frames */
+		frame_size[idx] = n_frames;
 	}
 
 	return paddr;
 }
 
 /*
- * 
- *
+ * This function is for deallocating memory pages upon request, after 
+ * calling this function the page address is freed while the current idx
+ * and the available n_frames are updated.
+ * IMPORTANT: for a proper execution of the function, it is necessary to
+ * deallocate the structures in opposite order, with respect to the
+ * allocation order
  */
-void 
-ram_freemem() {
+int 
+ram_freemem(paddr_t paddr) {
+	uint8_t tmp_idx, ret;
 
+	if(((paddr % PAGE_SIZE) != 0) || (paddr > lastpaddr)) {
+		return 0;
+	}
+
+	/* find the index entry related to paddr, to access the bitmap 
+	 * and reset that entry
+	 */
+	tmp_idx = (paddr - start_frame) / PAGE_SIZE;
+	bitmap_unmark(frame_list, tmp_idx);
+	
+	/* reset the current position of idx as well, and update both
+	 * idx and n_frames in order to point to the entry just freed
+	 */
+	frame_size[idx] = 0;
+	idx -= frame_size[tmp_idx]; n_frames += frame_size[tmp_idx];
+	
+	/* finally update frame_size with the current available frames */
+	ret = frame_size[idx];
+	frame_size[idx] = n_frames;
+
+	return ret;
 }
 
 /*
