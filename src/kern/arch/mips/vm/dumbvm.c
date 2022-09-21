@@ -27,6 +27,7 @@
  * SUCH DAMAGE.
  */
 
+
 #include <types.h>
 #include <kern/errno.h>
 #include <lib.h>
@@ -38,415 +39,591 @@
 #include <mips/tlb.h>
 #include <addrspace.h>
 #include <vm.h>
+#include <unistd.h>
 
-/*
- * Dumb MIPS-only "VM system" that is intended to only be just barely
- * enough to struggle off the ground. You should replace all of this
- * code while doing the VM assignment. In fact, starting in that
- * assignment, this file is not included in your kernel!
- *
- * NOTE: it's been found over the years that students often begin on
- * the VM assignment by copying dumbvm.c and trying to improve it.
- * This is not recommended. dumbvm is (more or less intentionally) not
- * a good design reference. The first recommendation would be: do not
- * look at dumbvm at all. The second recommendation would be: if you
- * do, be sure to review it from the perspective of comparing it to
- * what a VM system is supposed to do, and understanding what corners
- * it's cutting (there are many) and why, and more importantly, how.
- */
+#define DUMBVM_STACKPAGES    18         /*lo stack ha un numero di pagine fisse*/
 
-/* under dumbvm, always have 72k of user stack */
-/* (this must be > 64K so argument blocks of size ARG_MAX will fit) */
-#define DUMBVM_STACKPAGES 18
+static int nRamFrames = 0;                    //<---added     /*GLOBAL*/
+static unsigned char *freeRamFrames = NULL;   //<---added
+int tlb_fill_counter=0;
+int cont = 0,page_faults=0,num_pages;
+bool present;
+static paddr_t page_number;
+static int *stack;
 
 /*
  * Wrap ram_stealmem in a spinlock.
  */
-static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
+static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER; //<---added
+static struct spinlock freemem_lock = SPINLOCK_INITIALIZER; //<--- added
 
-void vm_bootstrap(void)
-{
-	/* Do nothing. */
-}
-
-/*
- * Check if we're in a context that can sleep. While most of the
- * operations in dumbvm don't in fact sleep, in a real VM system many
- * of them would. In those, assert that sleeping is ok. This helps
- * avoid the situation where syscall-layer code that works ok with
- * dumbvm starts blowing up during the VM assignment.
- */
-static void
-dumbvm_can_sleep(void)
-{
-	if (CURCPU_EXISTS())
-	{
-		/* must not hold spinlocks */
-		KASSERT(curcpu->c_spinlocks == 0);
-
-		/* must not be in an interrupt handler */
-		KASSERT(curthread->t_in_interrupt == 0);
-	}
-}
-
-static paddr_t
-getppages(unsigned long npages)
-{
-	paddr_t addr;
-
-	spinlock_acquire(&stealmem_lock);
-
-	addr = ram_stealmem(npages);
-
-	spinlock_release(&stealmem_lock);
-	return addr;
-}
-
-/* Allocate/free some kernel-space virtual pages */
-vaddr_t
-alloc_kpages(unsigned npages)
-{
-	paddr_t pa;
-
-	dumbvm_can_sleep();
-	pa = getppages(npages);
-	if (pa == 0)
-	{
-		return 0;
-	}
-	return PADDR_TO_KVADDR(pa);
-}
-
-void free_kpages(vaddr_t addr)
-{
-	/* nothing - leak the memory. */
-
-	(void)addr;
-}
 
 void vm_tlbshootdown(const struct tlbshootdown *ts)
 {
-	(void)ts;
-	panic("dumbvm tried to do tlb shootdown?!\n");
+        (void)ts;
+        panic("dumbvm tried to do tlb shootdown?!\n");
 }
 
-int vm_fault(int faulttype, vaddr_t faultaddress)
+void vm_bootstrap(void)         /*ADDED*/
 {
-	vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
-	paddr_t paddr;
-	int i;
-	uint32_t ehi, elo;
-	struct addrspace *as;
-	int spl;
+        /*Computation of available free frames number in RAM*/
+        int nRamFrames = ((int)ram_getsize())/PAGE_SIZE;
+        *stack = kmalloc(sizeof(int)*nRamFrames);
+        /*alloco il vettore freeRamFrame inizializzato a 0 (vuoto)*/
+        freeRamFrames = kmalloc(sizeof(unsigned char)*nRamFrames);
 
-	faultaddress &= PAGE_FRAME;
-
-	DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
-
-	switch (faulttype)
-	{
-	case VM_FAULT_READONLY:
-		/* We always create pages read-write, so we can't get this */
-		sys__exit(0);
-		panic("dumbvm: got VM_FAULT_READONLY\n");
-	case VM_FAULT_READ:
-	case VM_FAULT_WRITE:
-		break;
-	default:
-		return EINVAL;
-	}
-
-	if (curproc == NULL)
-	{
-		/*
-		 * No process. This is probably a kernel fault early
-		 * in boot. Return EFAULT so as to panic instead of
-		 * getting into an infinite faulting loop.
-		 */
-		return EFAULT;
-	}
-
-	as = proc_getas();
-	if (as == NULL)
-	{
-		/*
-		 * No address space set up. This is probably also a
-		 * kernel fault early in boot.
-		 */
-		return EFAULT;
-	}
-
-	/* Assert that the address space has been set up properly. */
-	KASSERT(as->as_vbase1 != 0);
-	KASSERT(as->as_pbase1 != 0);
-	KASSERT(as->as_npages1 != 0);
-	KASSERT(as->as_vbase2 != 0);
-	KASSERT(as->as_pbase2 != 0);
-	KASSERT(as->as_npages2 != 0);
-	KASSERT(as->as_stackpbase != 0);
-	KASSERT((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1);
-	KASSERT((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1);
-	KASSERT((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2);
-	KASSERT((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2);
-	KASSERT((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase);
-
-	vbase1 = as->as_vbase1;
-	vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
-	vbase2 = as->as_vbase2;
-	vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
-	stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
-	stacktop = USERSTACK;
-
-	if (faultaddress >= vbase1 && faultaddress < vtop1)
-	{
-		paddr = (faultaddress - vbase1) + as->as_pbase1;
-	}
-	else if (faultaddress >= vbase2 && faultaddress < vtop2)
-	{
-		paddr = (faultaddress - vbase2) + as->as_pbase2;
-	}
-	else if (faultaddress >= stackbase && faultaddress < stacktop)
-	{
-		paddr = (faultaddress - stackbase) + as->as_stackpbase;
-	}
-	else
-	{
-		return EFAULT;
-	}
-
-	/* make sure it's page-aligned */
-	KASSERT((paddr & PAGE_FRAME) == paddr);
-
-	/* Disable interrupts on this CPU while frobbing the TLB. */
-	spl = splhigh();
-
-	for (i = 0; i < NUM_TLB; i++)
-	{
-		tlb_read(&ehi, &elo, i);
-		if (elo & TLBLO_VALID)
-		{
-			continue;
-		}
-		ehi = faultaddress;
-		elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
-		DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
-		tlb_write(ehi, elo, i);
-		splx(spl);
-		return 0;
-	}
-
-	kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
-	splx(spl);
-	return EFAULT;
+        /*if (freeRamFrames==NULL || allocSize==NULL)
+        {
+                //reset to disable this vm management 
+                freeRamFrames = allocSize = NULL; 
+                return;
+        }*/
+        for (int i=0; i<nRamFrames; i++) 
+                freeRamFrames[i] = (unsigned char)0;
+        
+        /*spinlock_acquire(&freemem_lock);
+        allocTableActive = 1;
+        spinlock_release(&freemem_lock);*/
 }
 
-struct addrspace *
-as_create(void)
+static void dumbvm_can_sleep(void)
 {
-	struct addrspace *as = kmalloc(sizeof(struct addrspace));
-	if (as == NULL)
-	{
-		return NULL;
-	}
+        if (CURCPU_EXISTS()) {
+                /* must not hold spinlocks */
+                KASSERT(curcpu->c_spinlocks == 0); 
+                /*KASSERT se l'espressione nelle parentesi è falsa allora chiama panic e termina il programma*/
 
-	as->as_vbase1 = 0;
-	as->as_pbase1 = 0;
-	as->as_npages1 = 0;
-	as->as_vbase2 = 0;
-	as->as_pbase2 = 0;
-	as->as_npages2 = 0;
-	as->as_stackpbase = 0;
-
-	return as;
+                /* must not be in an interrupt handler */
+                KASSERT(curthread->t_in_interrupt == 0);
+        }
 }
 
-void as_destroy(struct addrspace *as)
+/*Function for Page Replacement alghorithm*/
+static paddr_t fifo_repl_alg(int stack[],int num_pages,paddr_t page_number) //<---added
 {
-	dumbvm_can_sleep();
-	kfree(as);
+        paddr_t addr;
+        if(cont==num_pages) cont = 0;
+        for(int i=0;i<num_pages;i++) 
+        {
+            if (stack[i] != page_number) present = 0;
+            else {
+                present = 1;
+                break;
+            }
+        }
+        //kprintf("Present : %d \n",present);
+        if(!present){
+        //old_frame=stack[cont];
+        stack[cont]=page_number;
+        //kprintf("stack[%d]:%d \n",cont,stack[cont]);
+        page_faults++;
+        cont++;
+        //addr = page_number*PAGE_SIZE /*+ firstpaddr */;
+        }
+    
+        //return addr;
+}
+/*Funzione per allocare delle pagine fisiche in memoria*/
+static paddr_t getppages(unsigned long npages) 
+{
+        paddr_t addr;
+
+        spinlock_acquire(&stealmem_lock);
+        addr = ram_stealmem(npages);         
+        spinlock_release(&stealmem_lock);
+        
+
+        return addr;     //mi ritorna l'indirizzo fisico dove ho allocato la prima pagina
 }
 
+
+/*Funzione che controlla se c'è spazio libero */
+static paddr_t getfreeppages(void) 
+{
+        paddr_t addr;
+        long i, found;
+        int flag;
+        //if (!isTableActive()) return 0;
+        spinlock_acquire(&freemem_lock);
+        
+        // Ricerco il primo frame libero
+        for (i=0; i<nRamFrames; i++) 
+        {
+                flag = 0;
+                if (freeRamFrames[i] == 0)   //se il freeframe è 0 allora è libero
+                {       found = i; 
+                        flag = 1;
+                        freeRamFrames[i] == (unsigned char)1;   //aggiorno il vettore
+                        break; //esce dal for
+                }
+        }
+
+        if (flag==1) addr = (paddr_t) found*PAGE_SIZE;    //Setto la variabile addr alla dimensione di una page se trovo frame liberi
+        
+        else  addr = 0;//se il freeRamFrames è tutto occupato cado in questa sezione e setto l'indirizzo a zero
+         
+        spinlock_release(&freemem_lock);
+
+        return addr;
+}
+
+
+
+
+
+
+/*Funzione che dealloca spazio in memoria: è solo un'interfaccia per freeRamFrames*/
+static int freeppages(paddr_t addr)
+{
+        long i, first;
+
+        //if (!isTableActive()) return 0;
+
+        first = addr/PAGE_SIZE;
+        //KASSERT(allocSize!=NULL);
+        KASSERT(nRamFrames>first);
+
+        spinlock_acquire(&freemem_lock);
+ 
+        freeRamFrames[first] = (unsigned char)0;      //aggiorno il vettore
+  
+        spinlock_release(&freemem_lock);
+        
+        return 1; 
+}
+
+
+
+/* Allocate/free some kernel-space virtual pages*/
+vaddr_t alloc_kpages(unsigned npages)                           /*MODIFIED*/
+{
+        paddr_t pa;
+
+        dumbvm_can_sleep();
+        pa = getppages(npages);
+        if (pa==0) {
+                return 0;
+        }
+        return PADDR_TO_KVADDR(pa);    /*ritorna l'indirizzo virtuale (della pagina) del kernel a cui 
+                                        corrisponde l'indirizzo fisico allocato in cui è allocata 
+                                        la pagina. Ovviamente il caso in cui l'indirizzo sia 0 questo non
+                                        esiste all'interno del kernel e quindi deve essere isolato*/                 
+}
+
+
+void free_kpages(vaddr_t addr)                       /*ADDED*/                                           
+{
+        //if (isTableActive()) {
+        paddr_t paddr = addr - MIPS_KSEG0;     /*converto l'indirizzo logico in indirizzo fisico utilizzando la maschera*/
+        long first = paddr/PAGE_SIZE;           /*Converto l’indirizzo fisico in indice d’inizio del frame*/
+        KASSERT(nRamFrames>first);
+        //freeppages(paddr);    
+        //}
+
+        (void)addr;
+}
+
+
+
+/*TLB MISS HANDLER: 
+Quando si controlla se il campo p di un certo virtual(logical) address
+è presente tra le entry della TLB e non c'è si ha un TLB MISS. La vm_fault gestisce questa 
+situazione.Usa le informazioni dall'address space del processo corrente per costruire e caricare
+la entry necessaria nella TLB.
+Questa funzione non tiene conto del momento in cui la TLB viene riempita tutta,quando accade bisogna 
+gestire la cosa sennò OS161 CRASHA*/  
+int vm_fault(int faulttype, vaddr_t faultaddress)                        
+{
+        vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
+        paddr_t paddr;
+        int i;
+        uint32_t ehi, elo;
+        struct addrspace *as;
+        int spl;
+        
+
+        faultaddress &= PAGE_FRAME; //Tramite la maschera con la PAGE_FRAME(=0xfffff000) estraggo il page number,che è l'address che non è stato
+        //trovato nelle entry della TLB. 
+        
+        DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
+
+        switch (faulttype) {
+            case VM_FAULT_READONLY: 
+                panic("dumbvm: got VM_FAULT_READONLY\n");    
+            case VM_FAULT_READ:  
+             /*se sono qui vuol dire che non ho trovato la voce richiesta nella TLB
+                allora devo controllare se tale voce è presente nella memoria principale se si allora
+                aggiornare la TLB e se non c'è spazio sfrattare una voce. Se no, caricare il frame da disco,
+                quindi poi aggiornare la TLB*/    
+            /*
+                for(int i=0;i<tot_pt_entries;i++)
+                {
+                        if(pt[i] && TLBLO_VALID) //Se ho una entry e quella entry è valida
+                        {
+                                index=i;
+                                page_entry_investigate = (faultaddress & Page_FRAME)>>12;
+                                if(page_entry_investigate==((pt[i] & Page_FRAME)>>12))
+                                {
+                                        //Ho il reference dentro la page table e quindi posso direttamente 
+                                        //accedere alla memoria
+                                        break;
+
+                                }
+                                else
+                                {
+                                        
+                                        //Controllo se la pagina è presente nello swap file
+                                        if(pt[i] & TLB_DIRTY)
+                                        {
+                                                for(int j=0;j<(sizeof(addr)/sizeof(addr[0]));j++) //Ciclo sul num max di celle di addr
+                                                {
+                                                        if(addr[j]==faultaddress)
+                                                        {
+                                                                victim_index=j;
+                                                                swap_pagein(as,faultaddress,j);
+                                                                break;
+
+                                                        }
+                                                }
+                                        }
+                                        else
+                                        {
+                                                //Lo prendo dall'elf file
+                                                //Chiamo load_segment();
+                                        }
+                                        //Controllo se ho spazio in memoria,cioè se freeframelist è vuoto o no:
+                                        //1.1)Se non è vuoto carico il frame libero in memoria
+                                        //1.2)Aggiorno freeframelist
+                                        //1.3)Aggiorno page table
+
+                                        //2.1)Se è vuoto non ho frame liberi(Se non ho spazio in memoria)
+                                        //2.2)Chiamo algoritmo di replacement
+                                        //Copiare contenuto page table dentro un vettore di appoggio 
+                                        *vect = kmalloc(sizeof(pt)*MAX_ENTRIES); //MAX_ENTRIES??
+                                        for()//Riempimento vect
+                                        for(int k=0;k<MAX_ENTRIES;k++)
+                                        {
+                                                fifo_repl_alg(vect,MAX_ENTRIES,pt[i]);
+                                                //Salvare il frame dello stack che è stato rimpiazzato(andra nello swap out)
+                                                //Salvare il frame che ha rimpiazzato quello vecchio(andra nello swap in)
+                                        }
+                                        
+                                        //2.3)Swap-out del vecchio frame(carico vecchio frame in swap file)
+
+                                        //2.4)Swap-in new frame,carico frame dallo swap file in memoria
+                                        
+
+                                        //3)Aggiorno page table
+                                        //break;
+                                        
+
+                                }
+                                
+
+                        }
+                }
+
+                
+            */              
+                             
+            case VM_FAULT_WRITE:
+                                            
+                break;
+            default:
+                return EINVAL;                                                         
+        }                                        
+
+        if (curproc == NULL) {
+                /*
+                 * No process. This is probably a kernel fault early
+                 * in boot. Return EFAULT so as to panic instead of
+                 * getting into an infinite faulting loop.
+                 */
+                return EFAULT;
+        }
+
+        as = proc_getas(); //Acquisisco l'address space dell'attuale processo che dopo andrò a controllare con le KASSERT
+        if (as == NULL) {
+                /*
+                 * No address space set up. This is probably also a
+                 * kernel fault early in boot.
+                 */
+                return EFAULT; 
+        }
+
+        /* Assert that the address space has been set up properly. */
+        
+        KASSERT((as->as_vbase1 != 0) & ((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1)); // <---modified(solo reso compatto)
+        KASSERT((as->as_pbase1 != 0) & ((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1));
+        KASSERT(as->as_npages1 != 0);
+        KASSERT((as->as_vbase2 != 0) & ((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2));
+        KASSERT((as->as_pbase2 != 0) & ((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2));
+        KASSERT(as->as_npages2 != 0);
+        KASSERT((as->as_stackpbase != 0) & ((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase));
+
+        vbase1 = as->as_vbase1;
+        vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
+        vbase2 = as->as_vbase2;
+        vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
+        stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
+        stacktop = USERSTACK;
+
+        /*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
+
+        if (faultaddress >= vbase1 && faultaddress < vtop1)
+        {       
+                paddr = (faultaddress - vbase1) + as->as_pbase1; /*code*/
+
+        }
+        else if (faultaddress >= vbase2 && faultaddress < vtop2) {
+                paddr = (faultaddress - vbase2) + as->as_pbase2; /*data*/
+        }
+        else if (faultaddress >= stackbase && faultaddress < stacktop) {
+                paddr = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
+        }
+        else  return EFAULT; /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
+        
+
+        /* make sure it's page-aligned */
+        KASSERT((paddr & PAGE_FRAME) == paddr);
+
+
+        /* Disable interrupts on this CPU while frobbing the TLB. */
+        spl = splhigh();/*disabilita l'interrupt per evitare che mentre modifico la tlb si genera un 
+        interrupt e non finisco l'azione*/
+
+
+        for (i=0; i<NUM_TLB; i++) 
+        {
+                tlb_read(&ehi, &elo, i);
+
+                if (elo & TLBLO_VALID) //Controllo se la entry che sto leggendo della TLB è valida
+                {
+                        //tlb_fill_counter ++; //<----- added //Conto tutte le volte che ho una entry valida
+                        continue;
+                        
+                }
+                //if(tlb_fill_counter == NUM_TLB) /*Se la tlb è tutta piena devo gestire questa cosa*/
+                {
+
+                }
+                //else
+                //{
+                ehi = faultaddress;
+                elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+                DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
+                tlb_write(ehi, elo, i);
+                splx(spl);
+                return 0;
+                //}
+        }
+        
+
+        kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
+
+        splx(spl); //Riabilito interrupt 
+        
+        return EFAULT;
+}
+
+
+struct addrspace * as_create(void)
+{
+        struct addrspace *as = kmalloc(sizeof(struct addrspace));
+        if (as==NULL) {
+                return NULL;
+        }
+
+        as->as_vbase1 = 0;
+        as->as_pbase1 = 0;
+        as->as_npages1 = 0;
+        as->as_vbase2 = 0;
+        as->as_pbase2 = 0;
+        as->as_npages2 = 0;
+        as->as_stackpbase = 0;
+
+        return as;
+}
+
+void
+as_destroy(struct addrspace *as)                /*<ADDED*/
+{
+        dumbvm_can_sleep();
+        freeppages(as->as_pbase1);
+        freeppages(as->as_pbase2);
+        freeppages(as->as_stackpbase);
+        kfree(as);
+}
+
+ /*Questa funzione va a invalidare le voci della TLB quando è necessario uno switch cioè quando si deve togliere 
+un processo dalla memoria e portarlo su disco e rimpiazzare quello spazio con il nuovo processo preso da disco. 
+Ogni volta che la CPU sta gestendo un process nella TLB è rimasta la traduzione di quell'indirizzo, quindi questa funzione
+va a pulire quel campo e far spazio ad altri*/
 void as_activate(void)
 {
-	int i, spl;
-	struct addrspace *as;
+        int i, spl;
+        struct addrspace *as;
 
-	as = proc_getas();
-	if (as == NULL)
-	{
-		return;
-	}
+        as = proc_getas();
+        if (as == NULL) {
+                return;
+        }
 
-	/* Disable interrupts on this CPU while frobbing the TLB. */
-	spl = splhigh();
+        /* Disable interrupts on this CPU while frobbing the TLB. */
+        spl = splhigh();
 
-	for (i = 0; i < NUM_TLB; i++)
-	{
-		tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i);
-	}
+        for (i=0; i<NUM_TLB; i++) {
+                tlb_write(TLBHI_INVALID(i), TLBLO_INVALID(), i); /*<------ Invalida tutte le voci della TLB*/
+        }
 
-	splx(spl);
+        splx(spl);
 }
 
 void as_deactivate(void)
 {
-	/* nothing */
+        /* nothing */
 }
 
-int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,
-					 int readable, int writeable, int executable)
+int as_define_region(struct addrspace *as, vaddr_t vaddr, size_t sz,int readable, int writeable, int executable)             
 {
-	size_t npages;
+        size_t npages;
 
-	dumbvm_can_sleep();
+        dumbvm_can_sleep();
 
-	/* Align the region. First, the base... */
-	/* "vaddr & ~(vaddr_t)PAGE_FRAME" is the page offset, basically we sum the required size
-	 * to the offset, because in the original implementation the allocator reserves PAGE_SIZE
-	 * memory blocks, but the first instruction is accessed at "page_offset" locations from
-	 * the first one inside the frame, so we need to reserve the size related to "page_offset"
-	 * plus the actual segment size "sz".
-	 */
-	sz += vaddr & ~(vaddr_t)PAGE_FRAME;
-	/* at this point, we can erase from "vaddr" the information related to the offset, so the
-	 * 3 LSBs are zeroed.
-	 */
-	vaddr &= PAGE_FRAME;
+        /* Align the region. First, the base... */
+        sz += vaddr & ~(vaddr_t)PAGE_FRAME;
+        vaddr &= PAGE_FRAME;
 
-	/* ...and now the length. */
-	/* to complete the computation of the required size, we round up "sz" to the next multiple
-	 * of PAGE_SIZE, first we add "PAGE_SIZE - 1" (so, 0x00000fff) to it, so that the resulting
-	 * value will be for sure greater than PAGE_SIZE, then to make the resulting "sz" an exact
-	 * multiple of PAGE_SIZE (there is a small residue due to the sum) we "&" the result with
-	 * PAGE_FRAME, in order to set to zero everything smaller than PAGE_SIZE.
-	 */
-	sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
+        /* ...and now the length. */
+        sz = (sz + PAGE_SIZE - 1) & PAGE_FRAME;
 
-	/* finally, since "sz" is a multiple of PAGE_SIZE, the resulting division will provide for sure
-	 * a whole number.
-	 */
-	npages = sz / PAGE_SIZE;
+        npages = sz / PAGE_SIZE;
 
-	/* We don't use these - all pages are read-write */
-	(void)readable;
-	(void)writeable;
-	(void)executable;
+        /* We don't use these - all pages are read-write */
+        (void)readable;
+        (void)writeable;
+        (void)executable;
 
-	if (as->as_vbase1 == 0)
-	{
-		as->as_vbase1 = vaddr;
-		as->as_npages1 = npages;
-		return 0;
-	}
+        if (as->as_vbase1 == 0) {
+                as->as_vbase1 = vaddr;
+                as->as_npages1 = npages;                                
+                return 0;
+        }
+        if (as->as_vbase2 == 0) {
+                as->as_vbase2 = vaddr;
+                as->as_npages2 = npages;
+                return 0;
+        }
 
-	if (as->as_vbase2 == 0)
-	{
-		as->as_vbase2 = vaddr;
-		as->as_npages2 = npages;
-		return 0;
-	}
-
-	/*
-	 * Support for more than two regions is not available.
-	 */
-	kprintf("dumbvm: Warning: too many regions\n");
-	return ENOSYS;
+        /*
+         * Support for more than two regions is not available.
+         */
+        //kprintf("dumbvm: Warning: too many regions\n");
+        return ENOSYS;                                                                  /*capire dove vado a finire con questo errore*/
 }
 
-static void
-as_zero_region(paddr_t paddr, unsigned npages)
+static void as_zero_region(paddr_t paddr, unsigned npages)
 {
-	bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
+        bzero((void *)PADDR_TO_KVADDR(paddr), npages * PAGE_SIZE);
 }
 
-int as_prepare_load(struct addrspace *as)
+
+
+
+/*Funzione importante che prepara lo spazio di lavoro                
+Poiche in loaelf.c definiamo le regioni rispettivamente di sola lettura per code ecc... se noi volessimo 
+però caricare quella regione ad esempio all'inizio, non possiamo scriverci. Queste due funzioni 
+(as_prepare_load, as_complete_load) che sono richiamate dal kernel automaticamente, risolvono il problema. 
+La prima funzione resetta tutti i permessi delle regioni come Writeble, ma hai bisogno anche di fare un backup 
+di quali erano i permessi delle regioni prima di questo evento. A tal proposito quando viene richiamata 
+as_complete_load allora tutti i permessi vengono rimpostati come all'inizio*/
+int as_prepare_load(struct addrspace *as)                                  
 {
-	KASSERT(as->as_pbase1 == 0);
-	KASSERT(as->as_pbase2 == 0);
-	KASSERT(as->as_stackpbase == 0);
+        //Kassert termina il programma solo se la condizione nella parentesi è falsa
+        KASSERT(as->as_pbase1 == 0);
+        KASSERT(as->as_pbase2 == 0);
+        KASSERT(as->as_stackpbase == 0);
 
-	dumbvm_can_sleep();
+        dumbvm_can_sleep();
 
-	as->as_pbase1 = getppages(as->as_npages1);
-	if (as->as_pbase1 == 0)
-	{
-		return ENOMEM;
-	}
+        as->as_pbase1 = getppages(as->as_npages1);
+        if (as->as_pbase1 == 0) {
+                return ENOMEM;          //capire dove vado a finire con questo errore
+        }
 
-	as->as_pbase2 = getppages(as->as_npages2);
-	if (as->as_pbase2 == 0)
-	{
-		return ENOMEM;
-	}
+        as->as_pbase2 = getppages(as->as_npages2);
+        if (as->as_pbase2 == 0) {
+                return ENOMEM;
+        }
 
-	as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
-	if (as->as_stackpbase == 0)
-	{
-		return ENOMEM;
-	}
+        as->as_stackpbase = getppages(DUMBVM_STACKPAGES);
+        if (as->as_stackpbase == 0) {
+                return ENOMEM;
+        }
 
-	as_zero_region(as->as_pbase1, as->as_npages1);
-	as_zero_region(as->as_pbase2, as->as_npages2);
-	as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
+        as_zero_region(as->as_pbase1, as->as_npages1);
+        as_zero_region(as->as_pbase2, as->as_npages2);
+        as_zero_region(as->as_stackpbase, DUMBVM_STACKPAGES);
 
-	return 0;
+        return 0;
 }
 
 int as_complete_load(struct addrspace *as)
 {
-	dumbvm_can_sleep();
-	(void)as;
-	return 0;
+        dumbvm_can_sleep();
+        (void)as;
+        return 0;
 }
 
-int as_define_stack(struct addrspace *as, vaddr_t *stackptr)
+int
+as_define_stack(struct addrspace *as, vaddr_t *stackptr)
 {
-	KASSERT(as->as_stackpbase != 0);
+        KASSERT(as->as_stackpbase != 0);
 
-	*stackptr = USERSTACK;
-	return 0;
+        *stackptr = USERSTACK;
+        return 0;
 }
 
-int as_copy(struct addrspace *old, struct addrspace **ret)
+int
+as_copy(struct addrspace *old, struct addrspace **ret)
 {
-	struct addrspace *new;
+        struct addrspace *new;
 
-	dumbvm_can_sleep();
+        dumbvm_can_sleep();
 
-	new = as_create();
-	if (new == NULL)
-	{
-		return ENOMEM;
-	}
+        new = as_create();
 
-	new->as_vbase1 = old->as_vbase1;
-	new->as_npages1 = old->as_npages1;
-	new->as_vbase2 = old->as_vbase2;
-	new->as_npages2 = old->as_npages2;
+        if (new==NULL) {
+                return ENOMEM;
+        }
 
-	/* (Mis)use as_prepare_load to allocate some physical memory. */
-	if (as_prepare_load(new))
-	{
-		as_destroy(new);
-		return ENOMEM;
-	}
+        new->as_vbase1 = old->as_vbase1;
+        new->as_npages1 = old->as_npages1;
+        new->as_vbase2 = old->as_vbase2;
+        new->as_npages2 = old->as_npages2;
 
-	KASSERT(new->as_pbase1 != 0);
-	KASSERT(new->as_pbase2 != 0);
-	KASSERT(new->as_stackpbase != 0);
+        /* (Mis)use as_prepare_load to allocate some physical memory. */
+        if (as_prepare_load(new)) {
+                as_destroy(new);
+                return ENOMEM;
+        }
 
-	memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
-			(const void *)PADDR_TO_KVADDR(old->as_pbase1),
-			old->as_npages1 * PAGE_SIZE);
+        KASSERT(new->as_pbase1 != 0);
+        KASSERT(new->as_pbase2 != 0);
+        KASSERT(new->as_stackpbase != 0);
 
-	memmove((void *)PADDR_TO_KVADDR(new->as_pbase2),
-			(const void *)PADDR_TO_KVADDR(old->as_pbase2),
-			old->as_npages2 * PAGE_SIZE);
+        memmove((void *)PADDR_TO_KVADDR(new->as_pbase1),
+                (const void *)PADDR_TO_KVADDR(old->as_pbase1),
+                old->as_npages1*PAGE_SIZE);
 
-	memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
-			(const void *)PADDR_TO_KVADDR(old->as_stackpbase),
-			DUMBVM_STACKPAGES * PAGE_SIZE);
+        memmove((void *)PADDR_TO_KVADDR(new->as_pbase2),
+                (const void *)PADDR_TO_KVADDR(old->as_pbase2),
+                old->as_npages2*PAGE_SIZE);
 
-	*ret = new;
-	return 0;
+        memmove((void *)PADDR_TO_KVADDR(new->as_stackpbase),
+                (const void *)PADDR_TO_KVADDR(old->as_stackpbase),
+                DUMBVM_STACKPAGES*PAGE_SIZE);
+
+        *ret = new;
+        return 0;
 }
