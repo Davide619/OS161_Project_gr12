@@ -25,6 +25,8 @@ Finito questo ciclo viene chiamata la funzione as_prepare_load(as) che alloca tu
 3. il secondo ciclo for rilegge nuovamente l'header dato e codice dall'elf file e avendo già definito la regione di memoria al ciclo for precedente, carica ciasun segmento nella locazione opportuna.
 
 # ALESSANDRO
+## FILE MODIFICATI/GENERATI:
+- src/kern/arch/mips/vm/dumbvm.c
 
 <b> Struttura del debug partendo dal loadelf.c:</b>
 Funzione int load_elf():questa funzione carica un user program elf file nell'address space del processo attuale e ritorna l'entry point, cioè l'indirizzo iniziale da cui parte il Program Counter:
