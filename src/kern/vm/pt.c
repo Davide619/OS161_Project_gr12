@@ -1,15 +1,16 @@
 #include <pt.h>
 
-struct pt * pt_create(size_t nentries)
+paddr_t * pt_create(size_t nentries)
 {
-    /* simply recalls an allocator from a low-level file
-     * (probably called "userram.c"?).
-     */
+    paddr_t * new_pt = kmalloc(sizeof(paddr_t) * nentries);
+    if(new_pt == NULL) return NULL;
+
+    return new_pt;
 }
 
-void pt_destroy(struct pt * pt_dest)
+void pt_destroy(paddr_t * pt_dest)
 {
-    /* an interface to a deallocator from a low-level file, 
-     * as pt_create. 
-     */
+    kfree(pt_dest);
+
+    return;
 }

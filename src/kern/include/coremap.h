@@ -2,6 +2,8 @@
 #define _COREMAP_H_
 
 #include <types.h>
+#include <lib.h>
+#include <vm.h> 
 
 /* data structure representing a (f)ree(f)rame(l)ist
  * implemented as a stack data structure 
@@ -24,8 +26,8 @@ struct ffl
 struct ffl * ffl_create(const uint8_t nframes);
 
 /* ffl_init():    function to initialize a ffl struct, it takes as input a ffl struct
- *                pointer and calls push() "nframes" times in order to fill it with 
- *                the frame addresses.
+ *                pointer, allocates "nframes" frames and calls push() "nframes" times 
+ *                in order to fill it with the frame addresses. 
  */
 void ffl_init(struct ffl ** ffl_init, uint8_t nframes);
 
@@ -42,7 +44,8 @@ void ffl_push(struct ffl ** ffl_push, const paddr_t fr_push);
  */
 paddr_t ffl_pop(struct ffl ** ffl_pop);
 
-/* ffl_destroy(): 
+/* ffl_destroy(): function to destroy a ffl struct, it calls an internal deallocator
+ *                that takes the ffl struct address and releases memory reserved to it.
  */
 void ffl_destroy(struct ffl * ffl_dest);
 
