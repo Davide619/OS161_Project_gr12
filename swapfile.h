@@ -24,7 +24,6 @@
  */
 
 off_t	 	swap_alloc(paddr_t pa_mem);
-void 		swap_free(off_t swapaddr);
 
 void 		swap_pagein(struct addrspace *as, paddr_t pa_mem, off_t swapaddr);
 void 		swap_pageout(struct addrspace *as, paddr_t pa_mem, off_t swapaddr);
@@ -37,6 +36,5 @@ void 		swap_pageout(struct addrspace *as, paddr_t pa_mem, off_t swapaddr);
 #define SWAP_SIZE 9437184 /*Byte      9M*1024B*1024B*/
 
 
-//extern struct lock *global_paging_lock;
 
 ////////////////////////////////////////////////////////////
