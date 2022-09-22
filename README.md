@@ -57,7 +57,10 @@ La getppage a sua volta deve controllare se vi sono frame liberi,per fare cio si
 
 # WILLIAM
 ## FILE MODIFICATI
+- src/kern/arch/mips/include/vm.h
+- src/kern/include/vm.h
 - src/kern/arch/mips/vm/ram.c
+- src/kern/vm/kmalloc.c
 - src/kern/include/coremap.h
 - src/kern/vm/coremap.c
 - src/kern/include/pt.h
