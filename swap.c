@@ -17,7 +17,7 @@
 #include <vnode.h>
 
 
-static const char swapfilename[] = "lhd0raw:";
+static const char swapfilename[] = "SWAPFILE";
 
 
 static struct bitmap *swapmap;	// swap allocation map
