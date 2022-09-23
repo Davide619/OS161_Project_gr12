@@ -150,6 +150,20 @@ swap_alloc(paddr_t pa_mem)
 }
 
 
+off_t
+search_swapped_frame(paddr_t pa_mem)		/*it searches for the frame in swap file*/
+{
+	swappage_trace *p;
+
+	for(int i = swap_total_pages-1; i>=0; i--){
+		if(pa_mem == p->addr[i])
+			return p->offset_swapfile[i];	/*returns the address allocation of the frame in swap file*/
+	}
+
+	return p->offset_swapfile[0];		/*returns the address allocation of the frame in swap file*/
+}
+
+
 /*
  * swap_io: Does one swap I/O. Panics on failure.
  *
