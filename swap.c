@@ -33,8 +33,6 @@ static unsigned long index_paddr =0;
 static struct vnode *swapstore;	// swap file
 
 
-//struct lock *global_paging_lock;
-
 
 /*
  * swap_bootstrap
@@ -57,7 +55,7 @@ swap_bootstrap(void)
 	kmalloc(sizeof(swappage_trace));   /*non so se devo farlo*/
 
 	strcpy(path, swapfilename);
-	rv = vfs_open(path, O_RDWR, 0, &swapstore); 				//file name <path>
+	rv = vfs_open(path, O_WRONLY|O_TRUNC|O_CREAT, 0, &swapstore); 				//file name <path>
 	if (rv) {
 		kprintf("swap: Error %d opening swapfile %s\n", rv, 
 			swapfilename);
@@ -98,6 +96,8 @@ swap_bootstrap(void)
 	if (swaplock == NULL) {
 		panic("swap: No memory for swap lock\n");
 	}
+	
+	vfs_close(swapstore);
 
 }
 
@@ -111,7 +111,6 @@ swap_shutdown(void)
 {
 	lock_destroy(swaplock);
 	bitmap_destroy(swapmap);
-	vfs_close(swapstore);
 }
 
 /*
@@ -172,12 +171,30 @@ search_swapped_frame(paddr_t pa_mem)		/*it searches for the frame in swap file*/
  */
 static
 void											/*pa_mem is the phisical address of the frame in memory*/
-swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out function*/
+swap_io(paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out function*/
 {
 	struct iovec iov;
 	struct uio myuio;
+	struct addrspace *as;
 	vaddr_t va;
 	int result;
+	
+	switch(rw){
+		case UIO_READ:
+			result = vfs_open(path, O_RDONLY, 0, &swapstore);
+			if (result) {
+				panic("ERROR: swap_in opening failed.\n");
+			}
+			break;
+			
+		case UIO_WRITE:
+			result = vfs_open(path, O_WRONLY, 0, &swapstore);
+			if (result) {
+				panic("ERROR: swap_out opening failed.\n");
+			}
+			break;
+	}
+	
 
 	iov.iov_ubase = (userptr_t)pa_mem;//vaddr;	
         iov.iov_len = PAGE_SIZE;           // length of the memory space
@@ -185,9 +202,9 @@ swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/
         myuio.uio_iovcnt = 1;
         myuio.uio_resid = PAGE_SIZE;          // amount to read from the file
         myuio.uio_offset = swapaddr;		
-        myuio.uio_segflg = is_executable ? UIO_USERISPACE : UIO_USERSPACE;
+        myuio.uio_segflg = UIO_USERSPACE; //is_executable ? UIO_USERISPACE : UIO_USERSPACE;
         myuio.uio_rw = rw;
-        myuio.uio_space = as;						/*DA CAPIRE MEGLIO*/
+        myuio.uio_space = as;						
 
 
 	KASSERT(pa_mem != INVALID_PADDR);
@@ -218,6 +235,8 @@ swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/
 		panic("swap: Error %d from swapfile (offset %ld)\n",
 		      result, (long)swapaddr);
 	}
+	
+	vfs_close(swapaddr);
 }
 
 /*
@@ -225,9 +244,9 @@ swap_io(struct addrspace *as, paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/
  * Synchronization: none here. See swap_io().
  */
 void
-swap_pagein(struct addrspace *as, paddr_t pa_mem, off_t swapaddr)
+swap_pagein(paddr_t pa_mem, off_t swapaddr)
 {
-	swap_io(as,pa_mem, swapaddr, UIO_READ);
+	swap_io(pa_mem, swapaddr, UIO_READ);
 }
 
 
@@ -236,7 +255,7 @@ swap_pagein(struct addrspace *as, paddr_t pa_mem, off_t swapaddr)
  * Synchronization: none here. See swap_io().
  */
 void
-swap_pageout(struct addrspace *as, paddr_t pa_mem, off_t swapaddr)
+swap_pageout(paddr_t pa_mem, off_t swapaddr)
 {
-	swap_io(as,pa_mem, swapaddr, UIO_WRITE);
+	swap_io(pa_mem, swapaddr, UIO_WRITE);
 }
