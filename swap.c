@@ -127,6 +127,11 @@ swap_alloc(paddr_t pa_mem)
 	swappage_trace *p;
 	
 	lock_acquire(swaplock);
+	
+	/* verify the SWAPFILE does not exceed the maximum size */
+	if(swap_free_pages == 0){
+		panic("\nERROR: Out of swap spaces.\n");
+	}
 
 	KASSERT(swap_free_pages <= swap_total_pages);
 
