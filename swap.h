@@ -24,6 +24,7 @@
  */
 
 off_t	 	swap_alloc(paddr_t pa_mem);
+off_t   search_swapped_frame(paddr_t pa_mem);
 
 void 		swap_pagein(struct addrspace *as, paddr_t pa_mem, off_t swapaddr);
 void 		swap_pageout(struct addrspace *as, paddr_t pa_mem, off_t swapaddr);
