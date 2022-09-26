@@ -809,13 +809,6 @@ thread_exit(void)
 	///////////////////////////////END ADDED///////////////////////////////////////////
 }
 
-
-
-
-
-	
-}
-
 /*
  * Yield the cpu to another process, but stay runnable.
  */
