@@ -1,12 +1,9 @@
 #include <coremap.h>
 
-/* in order to manage frames reserved for the user program,
- * a pointer to paddr_t is needed to allocate the requested
- * frames: this pointer is initialized inside ffl_init, where
- * we request "nframes" frames and store the address inside
- * frameblock
+/* in order to deallocate frames reserved for the user program,
+ * we use start_frame to store the first physical address reserved
  */
-static paddr_t frameblock;
+static paddr_t start_frame;
 
 struct ffl * ffl_create(const uint8_t nframes)
 {
@@ -24,7 +21,7 @@ struct ffl * ffl_create(const uint8_t nframes)
 
 void ffl_init(struct ffl ** ffl_init, uint8_t nframes)
 {
-    paddr_t cur_frame = frameblock = getppages(nframes);
+    paddr_t cur_frame = start_frame = getppages(nframes);
     
     (*ffl_init)->free_frame = cur_frame;
     while((*ffl_init)->next != NULL)
@@ -38,7 +35,11 @@ void ffl_init(struct ffl ** ffl_init, uint8_t nframes)
 
 void ffl_push(struct ffl ** ffl_push, const paddr_t fr_push)
 {
-    *ffl_push = (*ffl_push)->next;
+    /* first we check the content of free_frame: this is equal to 0 only if
+     * the stack is empty, in this case we keep the pointer to the current 
+     * ffl structure and proceed to assign fr_push.
+     */
+    *ffl_push = ((*ffl_push)->free_frame != 0) ? (*ffl_push)->next : *ffl_push;
     (*ffl_push)->free_frame = fr_push;
 
     return;
@@ -48,6 +49,10 @@ paddr_t ffl_pop(struct ffl ** ffl_pop)
 {
     paddr_t fr_pop = (*ffl_pop)->free_frame;
     (*ffl_pop)->free_frame = 0;
+
+    /* if ffl_pop points to the stack base, we don't want to further decrease
+     * ffl_pop: in this case, let's keep the current value of ffl_pop.
+     */
     *ffl_pop = ((*ffl_pop)->prev != NULL) ? (*ffl_pop)->prev : *ffl_pop;
 
     return fr_pop;
@@ -55,7 +60,7 @@ paddr_t ffl_pop(struct ffl ** ffl_pop)
 
 void ffl_destroy(struct ffl * ffl_dest)
 {
-    freeppages(frameblock); 
+    freeppages(start_frame); 
     kfree(ffl_dest);
 
     return;

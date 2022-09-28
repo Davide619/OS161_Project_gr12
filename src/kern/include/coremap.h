@@ -31,9 +31,10 @@ struct ffl * ffl_create(const uint8_t nframes);
  */
 void ffl_init(struct ffl ** ffl_init, uint8_t nframes);
 
-/* ffl_push():    function to push a new token inside the stack, first it assignes to 
- *                ffl_push the content of next so that the ffl pointer points to the 
- *                next entry, then it updates free_frame with the content of fr_push.
+/* ffl_push():    function to push a new token inside the stack; if the stack is not
+ *                empty, it assignes to ffl_push the content of next so that the ffl
+ *                pointer points to the next entry, then it updates free_frame with
+ *                the content of fr_push
  */
 void ffl_push(struct ffl ** ffl_push, const paddr_t fr_push);
 
@@ -41,6 +42,7 @@ void ffl_push(struct ffl ** ffl_push, const paddr_t fr_push);
  *                frame of ffl_pop in fr_pop, then it deletes the content of ffl_pop
  *                and finally it updates ffl_pop with prev so that ffl_pop points to
  *                the previous entry.
+ *                in case we reached the stack base, this function returns 0.
  */
 paddr_t ffl_pop(struct ffl ** ffl_pop);
 
