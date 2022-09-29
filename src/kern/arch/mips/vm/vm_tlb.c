@@ -76,3 +76,29 @@ int TLB_Invalidate(paddr_t paddr)
 
     return 0;
 }
+
+
+
+
+/*TLB update*/
+int TLB_update(paddr_t paddr, vaddr_t faultaddress)
+{
+    uint32_t ehi, elo, elo_new, i;
+    int spl;
+
+    spl = splhigh(); 
+
+    for (i=0; i<NUM_TLB; i++) 
+    {
+        TLB_Read(&ehi, &elo, i);
+        if ((ehi & TLBHI_VPAGE) == (faultaddress & TLBHI_VPAGE)) 
+        {
+            elo_new = paddr | TLBLO_DIRTY | TLBLO_VALID;
+            TLB_Write(ehi, elo_new, i);        
+        }
+    }
+    splx(spl);
+
+    return 0;
+}
+
