@@ -105,6 +105,7 @@ int tlb_probe(uint32_t entryhi, uint32_t entrylo);
 int tlb_insert(paddr_t paddr, vaddr_t faultaddress);
 int tlb_get_rr_victim(void);
 int TLB_Invalidate(paddr_t paddr);
+int TLB_update(paddr_t paddr, vaddr_t faultaddress);
 
 #endif /* _MIPS_TLB_H_ */
 
