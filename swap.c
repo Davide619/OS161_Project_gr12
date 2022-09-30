@@ -39,7 +39,7 @@ static struct vnode *swapstore;	// swap file
  */
 
 typedef struct st_t{
-	paddr_t *addr[SWAP_SIZE / PAGE_SIZE];
+	vaddr_t *addr[SWAP_SIZE / PAGE_SIZE];
 	off_t offset_swapfile[SWAP_SIZE / PAGE_SIZE];
 }swappage_trace;
 
@@ -89,11 +89,13 @@ swap_bootstrap(void)
 	DEBUG(DB_VM, "creating swap map with %lld entries\n",
 			swap_total_pages);
 	if (swapmap == NULL) {
+		vfs_close(swapstore);
 		panic("swap: No memory for swap bitmap\n");
 	}
 
 	swaplock = lock_create("swaplock");
 	if (swaplock == NULL) {
+		vfs_close(swapstore);
 		panic("swap: No memory for swap lock\n");
 	}
 	
@@ -176,7 +178,7 @@ search_swapped_frame(paddr_t pa_mem)		/*it searches for the frame in swap file*/
  */
 static
 void											/*pa_mem is the phisical address of the frame in memory*/
-swap_io(paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out function*/
+swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out function*/
 {
 	struct iovec iov;
 	struct uio myuio;
@@ -188,6 +190,7 @@ swap_io(paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out 
 		case UIO_READ:
 			result = vfs_open(path, O_RDONLY, 0, &swapstore);
 			if (result) {
+				vfs_close(swapstore);
 				panic("ERROR: swap_in opening failed.\n");
 			}
 			break;
@@ -195,13 +198,14 @@ swap_io(paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out 
 		case UIO_WRITE:
 			result = vfs_open(path, O_WRONLY, 0, &swapstore);
 			if (result) {
+				vfs_close(swapstore);
 				panic("ERROR: swap_out opening failed.\n");
 			}
 			break;
 	}
 	
 
-	iov.iov_ubase = (userptr_t)pa_mem;//vaddr;	
+	iov.iov_ubase = (userptr_t)(vaddr & PAGE_FRAME);	
         iov.iov_len = PAGE_SIZE;           // length of the memory space
         myuio.uio_iov = &iov;
         myuio.uio_iovcnt = 1;
@@ -229,14 +233,17 @@ swap_io(paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out 
 
 
 	if (result==EIO) {								/*read error */
+		vfs_close(swapstore);
 		panic("swap: EIO on swapfile (offset %ld)\n",
 		      (long)swapaddr);
 	}
 	else if (result==EINVAL) {					/*illegal attemption reading from a wrong offset*/
+		vfs_close(swapstore);
 		panic("swap: EINVAL from swapfile (offset %ld)\n",
 		      (long)swapaddr);
 	}
 	else if (result) {						/*generic error of write/read*/
+		vfs_close(swapstore);
 		panic("swap: Error %d from swapfile (offset %ld)\n",
 		      result, (long)swapaddr);
 	}
@@ -249,9 +256,9 @@ swap_io(paddr_t pa_mem, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out 
  * Synchronization: none here. See swap_io().
  */
 void
-swap_pagein(paddr_t pa_mem, off_t swapaddr)
+swap_pagein(vaddr vaddr, off_t swapaddr)
 {
-	swap_io(pa_mem, swapaddr, UIO_READ);
+	swap_io(vaddr, swapaddr, UIO_READ);
 }
 
 
@@ -260,7 +267,7 @@ swap_pagein(paddr_t pa_mem, off_t swapaddr)
  * Synchronization: none here. See swap_io().
  */
 void
-swap_pageout(paddr_t pa_mem, off_t swapaddr)
+swap_pageout(vaddr vaddr, off_t swapaddr)
 {
-	swap_io(pa_mem, swapaddr, UIO_WRITE);
+	swap_io(vaddr, swapaddr, UIO_WRITE);
 }
