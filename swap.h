@@ -28,6 +28,8 @@ off_t   search_swapped_frame(vaddr_t vaddr);
 
 void 		swap_pagein(vaddr vaddr, off_t swapaddr);
 void 		swap_pageout(vaddr vaddr, off_t swapaddr);
+void    swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw);
+
 
 /*
  * Special disk address:
