@@ -45,11 +45,7 @@
 
 static int nRamFrames = 0;                    //<---added     /*GLOBAL*/
 static unsigned char *freeRamFrames = NULL;   //<---added
-int tlb_fill_counter=0;
-int cont = 0,page_faults=0,num_pages;
-bool present;
-static paddr_t page_number;
-static int *stack;
+
 
 /*
  * Wrap ram_stealmem in a spinlock.
@@ -98,31 +94,6 @@ static void dumbvm_can_sleep(void)
         }
 }
 
-/*Function for Page Replacement alghorithm*/
-static paddr_t fifo_repl_alg(int stack[],int num_pages,paddr_t page_number) //<---added
-{
-        paddr_t addr;
-        if(cont==num_pages) cont = 0;
-        for(int i=0;i<num_pages;i++) 
-        {
-            if (stack[i] != page_number) present = 0;
-            else {
-                present = 1;
-                break;
-            }
-        }
-        //kprintf("Present : %d \n",present);
-        if(!present){
-        //old_frame=stack[cont];
-        stack[cont]=page_number;
-        //kprintf("stack[%d]:%d \n",cont,stack[cont]);
-        page_faults++;
-        cont++;
-        //addr = page_number*PAGE_SIZE /*+ firstpaddr */;
-        }
-    
-        //return addr;
-}
 /*Funzione per allocare delle pagine fisiche in memoria*/
 static paddr_t getppages(unsigned long npages) 
 {
@@ -250,84 +221,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         switch (faulttype) {
             case VM_FAULT_READONLY: 
                 panic("dumbvm: got VM_FAULT_READONLY\n");    
-            case VM_FAULT_READ:  
-             /*se sono qui vuol dire che non ho trovato la voce richiesta nella TLB
-                allora devo controllare se tale voce è presente nella memoria principale se si allora
-                aggiornare la TLB e se non c'è spazio sfrattare una voce. Se no, caricare il frame da disco,
-                quindi poi aggiornare la TLB*/    
-            /*
-                for(int i=0;i<tot_pt_entries;i++)
-                {
-                        if(pt[i] && TLBLO_VALID) //Se ho una entry e quella entry è valida
-                        {
-                                index=i;
-                                page_entry_investigate = (faultaddress & Page_FRAME)>>12;
-                                if(page_entry_investigate==((pt[i] & Page_FRAME)>>12))
-                                {
-                                        //Ho il reference dentro la page table e quindi posso direttamente 
-                                        //accedere alla memoria
-                                        break;
-
-                                }
-                                else
-                                {
-                                        
-                                        //Controllo se la pagina è presente nello swap file
-                                        if(pt[i] & TLB_DIRTY)
-                                        {
-                                                for(int j=0;j<(sizeof(addr)/sizeof(addr[0]));j++) //Ciclo sul num max di celle di addr
-                                                {
-                                                        if(addr[j]==faultaddress)
-                                                        {
-                                                                victim_index=j;
-                                                                swap_pagein(as,faultaddress,j);
-                                                                break;
-
-                                                        }
-                                                }
-                                        }
-                                        else
-                                        {
-                                                //Lo prendo dall'elf file
-                                                //Chiamo load_segment();
-                                        }
-                                        //Controllo se ho spazio in memoria,cioè se freeframelist è vuoto o no:
-                                        //1.1)Se non è vuoto carico il frame libero in memoria
-                                        //1.2)Aggiorno freeframelist
-                                        //1.3)Aggiorno page table
-
-                                        //2.1)Se è vuoto non ho frame liberi(Se non ho spazio in memoria)
-                                        //2.2)Chiamo algoritmo di replacement
-                                        //Copiare contenuto page table dentro un vettore di appoggio 
-                                        *vect = kmalloc(sizeof(pt)*MAX_ENTRIES); //MAX_ENTRIES??
-                                        for()//Riempimento vect
-                                        for(int k=0;k<MAX_ENTRIES;k++)
-                                        {
-                                                fifo_repl_alg(vect,MAX_ENTRIES,pt[i]);
-                                                //Salvare il frame dello stack che è stato rimpiazzato(andra nello swap out)
-                                                //Salvare il frame che ha rimpiazzato quello vecchio(andra nello swap in)
-                                        }
-                                        
-                                        //2.3)Swap-out del vecchio frame(carico vecchio frame in swap file)
-
-                                        //2.4)Swap-in new frame,carico frame dallo swap file in memoria
-                                        
-
-                                        //3)Aggiorno page table
-                                        //break;
-                                        
-
-                                }
-                                
-
-                        }
-                }
-
-                
-            */              
-                             
-            case VM_FAULT_WRITE:
-                                            
+            case VM_FAULT_READ:                                 
+            case VM_FAULT_WRITE:                                            
                 break;
             default:
                 return EINVAL;                                                         
@@ -399,16 +294,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 
                 if (elo & TLBLO_VALID) //Controllo se la entry che sto leggendo della TLB è valida
                 {
-                        //tlb_fill_counter ++; //<----- added //Conto tutte le volte che ho una entry valida
-                        continue;
-                        
+                      continue;  
                 }
-                //if(tlb_fill_counter == NUM_TLB) /*Se la tlb è tutta piena devo gestire questa cosa*/
-                {
-
-                }
-                //else
-                //{
                 ehi = faultaddress;
                 elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
                 DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
