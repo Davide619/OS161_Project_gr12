@@ -123,7 +123,7 @@ swap_shutdown(void)
 
 
 off_t
-swap_alloc(paddr_t pa_mem)	
+swap_alloc(vaddr_t vaddr)	
 {
 	uint32_t rv, index;
 	swappage_trace *p;
@@ -143,7 +143,7 @@ swap_alloc(paddr_t pa_mem)
 	rv = bitmap_alloc(swapmap, &index);					/*it finds the free bit, sets it and return its index*/
 	KASSERT(rv == 0);
 
-	p->addr[index_paddr] = pa_mem;
+	p->addr[index_paddr] = vaddr;
 	p->offset_swapfile[index_paddr] = index*PAGE_SIZE;
 
 	index_paddr++;
@@ -157,12 +157,12 @@ swap_alloc(paddr_t pa_mem)
 
 
 off_t
-search_swapped_frame(paddr_t pa_mem)		/*it searches for the frame in swap file*/
+search_swapped_frame(vaddr_t vaddr)		/*it searches for the frame in swap file*/
 {
 	swappage_trace *p;
 
 	for(int i = swap_total_pages-1; i>=0; i--){
-		if(pa_mem == p->addr[i])
+		if(vaddr == p->addr[i])
 			return p->offset_swapfile[i];	/*returns the address allocation of the frame in swap file*/
 	}
 
