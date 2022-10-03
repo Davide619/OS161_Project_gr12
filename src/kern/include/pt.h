@@ -14,7 +14,7 @@ paddr_t * pt_create(size_t nentries);
 void pt_destroy(paddr_t * pt_dest);
 
 /* functions to Manage page table and replacement*/ 
-paddr_t victim_sel(paddr_t *pt,uint8_t *entry_valid,/*,uint8_t nvalidentries,*/uint8_t index); //<--added
+paddr_t victim_sel(paddr_t *pt,uint8_t *entry_valid,/*,uint8_t nvalidentries,*/uint8_t index); 
 void pt_update(paddr_t *pt,uint8_t *entry_valid,paddr_t new_frame,uint8_t index,uint8_t pt_index,uint8_t dirty_bit,uint8_t valid_bit);
 
 
