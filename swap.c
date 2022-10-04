@@ -38,12 +38,6 @@ static struct vnode *swapstore;	// swap file
  * swap_bootstrap
  */
 
-typedef struct st_t{
-	vaddr_t *addr[SWAP_SIZE / PAGE_SIZE];
-	off_t offset_swapfile[SWAP_SIZE / PAGE_SIZE];
-}swappage_trace;
-
-
 void
 swap_bootstrap(void)
 {
