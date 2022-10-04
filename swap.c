@@ -11,7 +11,7 @@
 #include <mainbus.h>
 #include <addrspace.h>
 #include <vm.h>
-#include <swapfile.h>
+#include <swap.h>
 #include <machine/coremap.h>
 #include <vfs.h>
 #include <vnode.h>
