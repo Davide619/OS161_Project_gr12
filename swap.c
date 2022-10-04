@@ -32,7 +32,7 @@ static unsigned long index_paddr =0;
 
 static struct vnode *swapstore;	// swap file
 
-
+static swappage_trace *p;
 
 /*
  * swap_bootstrap
@@ -46,7 +46,7 @@ swap_bootstrap(void)
 	char path[sizeof(swapfilename)];
 	off_t filesize; 							
 	
-	kmalloc(sizeof(swappage_trace));   /*non so se devo farlo*/
+	p = kmalloc(sizeof(swappage_trace));   /*non so se devo farlo*/
 
 	strcpy(path, swapfilename);
 	rv = vfs_open(path, O_WRONLY|O_TRUNC|O_CREAT, 0, &swapstore); 				//file name <path>
@@ -120,7 +120,6 @@ off_t
 swap_alloc(vaddr_t vaddr)	
 {
 	uint32_t rv, index;
-	swappage_trace *p;
 	
 	lock_acquire(swaplock);
 	
@@ -153,7 +152,6 @@ swap_alloc(vaddr_t vaddr)
 off_t
 search_swapped_frame(vaddr_t vaddr)		/*it searches for the frame in swap file*/
 {
-	swappage_trace *p;
 
 	for(int i = swap_total_pages-1; i>=0; i--){
 		if(vaddr == p->addr[i])
