@@ -39,5 +39,9 @@ void    swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw);
 #define SWAP_SIZE 9437184 /*Byte      9M*1024B*1024B*/
 
 
+typedef struct st_t{
+	vaddr_t *addr[SWAP_SIZE / PAGE_SIZE];
+	off_t offset_swapfile[SWAP_SIZE / PAGE_SIZE];
+}swappage_trace;
 
 ////////////////////////////////////////////////////////////
