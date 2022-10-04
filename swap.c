@@ -107,6 +107,8 @@ swap_shutdown(void)
 {
 	lock_destroy(swaplock);
 	bitmap_destroy(swapmap);
+	
+	/*Inserire funzione di deallocazione del puntatore alla struttura*/
 }
 
 /*
