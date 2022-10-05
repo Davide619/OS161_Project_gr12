@@ -218,15 +218,17 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         
         DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
-        switch (faulttype) {
-            case VM_FAULT_READONLY: 
-                panic("dumbvm: got VM_FAULT_READONLY\n");    
-            case VM_FAULT_READ:                                 
-            case VM_FAULT_WRITE:                                            
-                break;
-            default:
-                return EINVAL;                                                         
-        }                                        
+        /*check if the fault is due to attempt text section modification*/
+        if(faulttype == VM_FAULT_READONLY){
+		kprintf("Attempt to modify the text section.\nExiting...\n");
+		sys__exit(0);
+	}       
+        
+        /*getting the page number*/
+        page_number = faultaddress & PAGE_FRAME;                       /*<------variable to be declered*/
+        
+        /*getting the offset*/
+        offset_page = faultaddress & 0x00000fff;                       /*<------variable to be declered*/
 
         if (curproc == NULL) {
                 /*
