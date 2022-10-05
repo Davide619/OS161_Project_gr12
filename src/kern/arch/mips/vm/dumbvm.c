@@ -208,13 +208,13 @@ gestire la cosa sennò OS161 CRASHA*/
 int vm_fault(int faulttype, vaddr_t faultaddress)                        
 {
         vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset;
-        paddr_t paddr, frame_number;
+        paddr_t paddr, frame_number, old_frame;
         int i;
 	uint8_t pt_entry;
         uint32_t ehi, elo;
         struct addrspace *as;
         int spl;
-        off_t index_swapfile;
+        off_t index_swapfile, page_in_swapfile;
         
         DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
@@ -286,6 +286,13 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		/*check if freeframelist is empty*/
 		if(frame_number ==0){
 			/*replacement algorithm*/
+			old_frame = get_victim(as->pt, as->entry_valid);
+			
+			/*swap out*/
+			page_in_swapfile = swap_alloc(old_frame);
+			/*update swappage_trace*/
+			swap_trace_update()
+			
 			
 		}else{}
 		
