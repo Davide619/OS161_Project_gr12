@@ -228,7 +228,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         page_number = faultaddress & PAGE_FRAME;                       /*<------variable to be declered*/
         
         /*getting the offset*/
-        offset_page = faultaddress & 0x00000fff;                       /*<------variable to be declered*/
+        page_offset = faultaddress & 0x00000fff;                       /*<------variable to be declered*/
 
         if (curproc == NULL) {
                 /*
