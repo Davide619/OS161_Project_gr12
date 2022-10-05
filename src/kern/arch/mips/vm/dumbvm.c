@@ -225,7 +225,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	}       
         
         /*getting the page number*/
-        page_number = faultaddress & PAGE_FRAME;                       /*<------variable to be declered*/
+        page_number = (faultaddress & PAGE_FRAME) >>3;                  /*<------variable to be declered*/
         
         /*getting the offset*/
         page_offset = faultaddress & 0x00000fff;                       /*<------variable to be declered*/
