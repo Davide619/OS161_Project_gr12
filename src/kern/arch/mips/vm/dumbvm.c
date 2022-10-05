@@ -203,18 +203,18 @@ situazione.Usa le informazioni dall'address space del processo corrente per cost
 la entry necessaria nella TLB.
 Questa funzione non tiene conto del momento in cui la TLB viene riempita tutta,quando accade bisogna 
 gestire la cosa sennò OS161 CRASHA*/  
+
+
 int vm_fault(int faulttype, vaddr_t faultaddress)                        
 {
-        vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop;
-        paddr_t paddr;
+        vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset;
+        paddr_t paddr, frame_number;
         int i;
+	uint8_t pt_entry;
         uint32_t ehi, elo;
         struct addrspace *as;
         int spl;
-        
-
-        faultaddress &= PAGE_FRAME; //Tramite la maschera con la PAGE_FRAME(=0xfffff000) estraggo il page number,che è l'address che non è stato
-        //trovato nelle entry della TLB. 
+        off_t index_swapfile;
         
         DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
 
@@ -223,13 +223,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		kprintf("Attempt to modify the text section.\nExiting...\n");
 		sys__exit(0);
 	}       
-        
-        /*getting the page number*/
-        page_number = (faultaddress & PAGE_FRAME) >>3;                  /*<------variable to be declered*/
-        
-        /*getting the offset*/
-        page_offset = faultaddress & 0x00000fff;                       /*<------variable to be declered*/
-
+	
         if (curproc == NULL) {
                 /*
                  * No process. This is probably a kernel fault early
@@ -240,6 +234,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         }
 
         as = proc_getas(); //Acquisisco l'address space dell'attuale processo che dopo andrò a controllare con le KASSERT
+
         if (as == NULL) {
                 /*
                  * No address space set up. This is probably also a
@@ -247,7 +242,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
                  */
                 return EFAULT; 
         }
-
+	
+		
         /* Assert that the address space has been set up properly. */
         
         KASSERT((as->as_vbase1 != 0) & ((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1)); // <---modified(solo reso compatto)
@@ -265,6 +261,39 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
         stacktop = USERSTACK;
 
+ 	/*getting the page number*/
+        page_number = faultaddress & PAGE_FRAME;                
+        
+        /*getting the offset*/
+        page_offset = faultaddress & 0x00000fff;                       
+	
+	/*index in PT*/
+	pt_entry = (faultaddress-vbase1)/PAGE_SIZE;
+	
+	/*check for an invalid entry in PT*/
+	if(as->pt[pt_entry] == NULL){
+		
+		index_swapfile = search_swapped_frame(faultaddress);
+		
+		/*check the page in swapfile*/
+		if(index_swapfile == 0){
+			load_from_elf = 1;			/*<------variable to be declered (global or static)?*/
+		}
+		
+		/*pop from freeframelist*/
+		frame_number = ffl_pop(&as->freeframelist);
+		
+		/*check if freeframelist is empty*/
+		if(frame_number ==0){
+			/*replacement algorithm*/
+			
+		}else{}
+		
+		
+	}
+	
+	
+	
         /*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
 
         if (faultaddress >= vbase1 && faultaddress < vtop1)
