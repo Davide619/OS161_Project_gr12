@@ -209,11 +209,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 {
         vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset;
         paddr_t paddr, frame_number, old_frame;
-        int i;
+        int i,ret_value, spl;
 	uint8_t pt_entry;
         uint32_t ehi, elo;
         struct addrspace *as;
-        int spl;
         off_t index_swapfile, page_in_swapfile;
         
         DEBUG(DB_VM, "dumbvm: fault: 0x%x\n", faultaddress);
@@ -289,9 +288,14 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			old_frame = get_victim(as->pt, as->entry_valid);
 			
 			/*swap out*/
-			page_in_swapfile = swap_alloc(old_frame);
-			/*update swappage_trace*/
-			swap_trace_update()
+			page_in_swapfile = swap_alloc((vaddr_t)old_frame);
+			ret_value = swap_pageout((vaddr_t)old_frame, page_in_swapfile);
+			
+			if(ret_value == 0){
+				kprintf("Swap_out page is DONE!\n");
+			}else{
+				panic("ERROR swap_out page! the program is stopping...\n");
+			}
 			
 			
 		}else{}
