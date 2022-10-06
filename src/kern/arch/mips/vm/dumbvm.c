@@ -297,6 +297,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				panic("ERROR swap_out page! the program is stopping...\n");
 			}
 			
+			//Bisogna adattare,se non è già fatto, il formato del nuovo frame dal freeframelist a quello della entry della page table: è un paddr_t,
+			//quindi come tipo ci siamo ma è caricato negli msb o lsb? Perchè se togliamo dirty bit e valid allora possiamo riempire le entry della pt
+			//direttamente negli lsb,però poi dovremmo comunque shiftare a sinistra per concatenare con offset di faultaddress...
+			//new frame = //lo prendo dal campo del frame di freeframe list;
+			//pt_update(as->pt,as->entry_valid,new_frame,nvalidentries,pt_entry); //Questo è il modo di usare pt_update dopo lo swap in
 			
 		}else{}
 		
