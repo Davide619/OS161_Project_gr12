@@ -280,10 +280,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		}
 		
 		/*pop from freeframelist*/
-		frame_number = ffl_pop(&as->freeframelist);
+		frame_number = ffl_pop(&as->freeframelist); //Frame number cos'è?
 		
 		/*check if freeframelist is empty*/
-		if(frame_number ==0){
+		if(frame_number == 0){
 			/*replacement algorithm*/
 			old_frame = get_victim(as->pt, as->entry_valid);
 			
@@ -303,7 +303,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			//new frame = //lo prendo dal campo del frame di freeframe list;
 			//pt_update(as->pt,as->entry_valid,new_frame,nvalidentries,pt_index); //Questo è il modo di usare pt_update dopo lo swap in
 			
-		}else{}
+		}
+		else
+		{
+		}
 		
 		
 	}
