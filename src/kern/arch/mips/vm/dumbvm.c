@@ -210,7 +210,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset;
         paddr_t paddr, frame_number, old_frame;
         int i,ret_value, spl;
-	uint8_t pt_entry;
+	uint8_t pt_index;
         uint32_t ehi, elo;
         struct addrspace *as;
         off_t index_swapfile, page_in_swapfile;
@@ -267,10 +267,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         page_offset = faultaddress & 0x00000fff;                       
 	
 	/*index in PT*/
-	pt_entry = (faultaddress-vbase1)/PAGE_SIZE;
+	pt_index = (faultaddress-vbase1)/PAGE_SIZE;
 	
 	/*check for an invalid entry in PT*/
-	if(as->pt[pt_entry] == NULL){
+	if(as->pt[pt_index] == NULL){
 		
 		index_swapfile = search_swapped_frame(faultaddress);
 		
@@ -301,7 +301,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			//quindi come tipo ci siamo ma è caricato negli msb o lsb? Perchè se togliamo dirty bit e valid allora possiamo riempire le entry della pt
 			//direttamente negli lsb,però poi dovremmo comunque shiftare a sinistra per concatenare con offset di faultaddress...
 			//new frame = //lo prendo dal campo del frame di freeframe list;
-			//pt_update(as->pt,as->entry_valid,new_frame,nvalidentries,pt_entry); //Questo è il modo di usare pt_update dopo lo swap in
+			//pt_update(as->pt,as->entry_valid,new_frame,nvalidentries,pt_index); //Questo è il modo di usare pt_update dopo lo swap in
 			
 		}else{}
 		
