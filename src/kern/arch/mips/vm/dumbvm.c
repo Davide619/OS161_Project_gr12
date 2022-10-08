@@ -276,7 +276,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		
 		/*check the page in swapfile*/
 		if(index_swapfile == 0){
-			load_from_elf = 1;			/*<------variable to be declered (global or static)?*/
+			load_from_elf = 1; /*frame out from swap file*/			/*<------variable to be declered (global or static)?*/
 		}
 		
 		/*pop from freeframelist*/
@@ -289,9 +289,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			vengano automaticamente caricate in memoria fisica (RAM)*/
 			old_frame = get_victim(as->pt, as->entry_valid);
 			
+			
 			/*swap out*/
-			page_in_swapfile = swap_alloc((vaddr_t)old_frame);
-			ret_value = swap_pageout((vaddr_t)old_frame, page_in_swapfile);
+			page_in_swapfile = swap_alloc(vbase1+pt_index); //supponendo vbase1 indirizzo virtuale di partenza del primo segmento nell'elf
+			ret_value = swap_pageout((vbase1+pt_index), page_in_swapfile);
 			
 			if(ret_value == 0){
 				kprintf("Swap_out page is DONE!\n");
@@ -300,6 +301,42 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 			
 			//Qui dobbiamo pulire il FRAME in memoria
+			/* Clear page of memory to be replaced */
+			bzero((void*)(faultaddress & PAGE_FRAME)+pt_index, PAGE_SIZE);
+			
+			
+			
+			//qui devo aggiornare la PT inserendo il frame number in una posizione differente da quella precedente
+			//che dipende dal nuovo indirizzo di fault ricevuto. Questa operazione è importante farla prima di 
+			//fare lo swap, quindi scrivere in memoria, perchè altrimenti non ci sarebbe nessun indirizzo fisico (frame 
+			//number) associato all'indirizzo virtuale (page number) che la VOP può leggere.
+			
+			
+			
+			/*Checking where the frame has to be loaded from*/
+			if(load_from_elf == 1){
+				index_swapelf = /*queste informazioni devo ricavarle dall'elf file (magari fare una struttura apposita)
+						questa variabile tiene conto dell'offset della pagina all'interno dell'elf_file*/
+					
+				/*i will load the frame from elf_file*/
+				ret_val = swap_pagein((vbase1+pt_index), index_swapelf);
+				if(ret_val ==0){
+					kprintf("Swap_in page from swap_file is DONE!\n");
+				}else{
+					panic("ERROR swap_in page from swap_file! the program is stopping...\n");
+				}
+			}else{
+				/*i will load the frame from swap_file*/
+				ret_val = swap_pagein((vbase1+pt_index), index_swapfile);	
+				if(ret_val ==0){
+					kprintf("Swap_in page from swap_file is DONE!\n");
+				}else{
+					panic("ERROR swap_in page from swap_file! the program is stopping...\n");
+				}
+			}
+			
+
+			
 			//as_zero_region(paddr_t paddr,1); //Dobbiamo preoccuparci di sapere sempre quali sono gli indirizzi dei frame in memoria perchè ci serve
 			//pulire il frame,non basta freeframelist perchè qui dentro freeframelist è vuoto e non ci da alcuna informazione.
 			
@@ -310,13 +347,45 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			//pt_update(as->pt,as->entry_valid,new_frame,nvalidentries,pt_index); //Questo è il modo di usare pt_update dopo lo swap in
 			
+		}else{
+			/*QUI SONO NEL CASO IN CUI FREEFRAMELIST è PIENO*/
+			
+			if(load_from_elf == 1){ /*frame out from swap_file*/
+				/*load the frame from elf_file*/
+				index_swapelf = /*queste informazioni devo ricavarle dall'elf file (magari fare una struttura apposita)
+						questa variabile tiene conto dell'offset della pagina all'interno dell'elf_file*/
+					
+				/*i will load the frame from elf_file*/
+				ret_val = swap_pagein((vbase1+pt_index), index_swapelf);
+				if(ret_val ==0){
+					kprintf("Swap_in page from swap_file is DONE!\n");
+				}else{
+					panic("ERROR swap_in page from swap_file! the program is stopping...\n");
+				}
+			}else{
+				/*i will load the frame from swap_file*/
+				ret_val = swap_pagein((vbase1+pt_index), index_swapfile);	
+				if(ret_val ==0){
+					kprintf("Swap_in page from swap_file is DONE!\n");
+				}else{
+					panic("ERROR swap_in page from swap_file! the program is stopping...\n");
+				}
+			
+			}
+
+			
 		}
-		else
-		{
-		}
+		/*QUI DEVO AGGIORNARE ENTRY_VALID*/
 		
 		
+
 	}
+		/*CONTROLLARE QUI SE LA TLB è PIENA*/
+	
+	
+	
+	
+	
 	
 	
 	
