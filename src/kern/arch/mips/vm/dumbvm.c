@@ -285,6 +285,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		/*check if freeframelist is empty*/
 		if(frame_number == 0){
 			/*replacement algorithm*/
+			/*assumiamo che si debba lavorare con indirizzi virtuali e che le informazioni 
+			vengano automaticamente caricate in memoria fisica (RAM)*/
 			old_frame = get_victim(as->pt, as->entry_valid);
 			
 			/*swap out*/
