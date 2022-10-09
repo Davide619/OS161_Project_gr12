@@ -337,24 +337,13 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}
 			
-
-			
-			//as_zero_region(paddr_t paddr,1); //Dobbiamo preoccuparci di sapere sempre quali sono gli indirizzi dei frame in memoria perchè ci serve
-			//pulire il frame,non basta freeframelist perchè qui dentro freeframelist è vuoto e non ci da alcuna informazione.
-			
-			//Bisogna adattare,se non è già fatto, il formato del nuovo frame dal freeframelist a quello della entry della page table: è un paddr_t,
-			//quindi come tipo ci siamo ma è caricato negli msb o lsb? Perchè se togliamo dirty bit e valid allora possiamo riempire le entry della pt
-			//direttamente negli lsb,però poi dovremmo comunque shiftare a sinistra per concatenare con offset di faultaddress...
-			//new frame = //lo prendo dal campo del frame di freeframe list;
-			
-			//pt_update(as->pt,as->entry_valid,new_frame,nvalidentries,pt_index); //Questo è il modo di usare pt_update dopo lo swap in
 			
 		}else{
 			/*QUI SONO NEL CASO IN CUI FREEFRAMELIST è PIENO*/
 			
 			if(load_from_elf == 1){ /*frame out from swap_file*/
-				/*load the frame from elf_file*/
-					
+				
+				/*load the frame from elf_file*/	
 				/*i will load the frame from elf_file*/
 				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);
 				if(ret_val ==0){
@@ -380,6 +369,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		
 
 	}
+		/*SE SONO QUI VUOL DIRE CHE PT[PAGE NUMBER] != NULL QUINDI LA PAGE TABLE CONTIENE IL FRAME E DEVO SOLO
+		AGGIORNARE LA TLB*/
 		/*CONTROLLARE QUI SE LA TLB è PIENA*/
 	
 	
