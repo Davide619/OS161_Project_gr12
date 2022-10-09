@@ -209,7 +209,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 {
         vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset, new_pt_index;
         paddr_t paddr, frame_number, old_frame;
-        int i,ret_value, spl;
+        int i,ret_value, spl, tlb_victim, ret_TLB_value;
 	uint8_t pt_index;
         uint32_t ehi, elo;
         struct addrspace *as;
@@ -283,7 +283,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		frame_number = ffl_pop(&as->freeframelist); 
 		
 		/*check if freeframelist is empty*/
-		if(frame_number == 0){
+		if(frame_number == 0){	/*free frame list piena*/
 			/*replacement algorithm*/
 			/*assumiamo che si debba lavorare con indirizzi virtuali e che le informazioni 
 			vengano automaticamente caricate in memoria fisica (RAM)*/
@@ -339,7 +339,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			
 		}else{
-			/*QUI SONO NEL CASO IN CUI FREEFRAMELIST è PIENO*/
+			/*QUI SONO NEL CASO IN CUI FREEFRAMELIST è VUOTO*/
 			
 			if(load_from_elf == 1){ /*frame out from swap_file*/
 				
@@ -369,10 +369,37 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		
 
 	}
-		/*SE SONO QUI VUOL DIRE CHE PT[PAGE NUMBER] != NULL QUINDI LA PAGE TABLE CONTIENE IL FRAME E DEVO SOLO
-		AGGIORNARE LA TLB*/
-		/*CONTROLLARE QUI SE LA TLB è PIENA*/
+	/*SE SONO QUI VUOL DIRE CHE PT[PAGE NUMBER] != NULL QUINDI LA PAGE TABLE CONTIENE IL FRAME E DEVO SOLO
+	AGGIORNARE LA TLB OPPURE HO UTILIZZATO L'ALGORITMO DI REPLACEMENT E ORA DEVO AGGIORNARE LA TLB. QUINDI DEVO
+	DISCRIMINARE I DUE CASI POICHè GLI INDIRIZZI FISICI DA INSERIRE NELLA TLB SARANNO DIFFERENT (frame_number oppure old_frame)*/
+		
 	
+	/*MI CHIEDO SE PT[PAGE NUMBER] == NULL OPPURE NO*/
+	if(as->pt[pt_index] == NULL){
+		/*carico la TLB con la nuova entry*/
+                ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
+		if (ret_TLB_value == 0){
+			kprintf("TLB was not FULL, new TLB entry is loaded!\n);
+		}else{
+			kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
+		}
+	
+	}else{
+		/*carico la TLB con la nuova entry*/
+		ret_TLB_value = tlb_insert(old_frame, frame_number, 0,faultaddress);
+		if (ret_TLB_value == 0){
+			kprintf("TLB was not FULL, new TLB entry is loaded!\n);
+		}else{
+			kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
+		}
+	}
+		
+
+				
+				
+				
+				
+        
 	
 	
 	
