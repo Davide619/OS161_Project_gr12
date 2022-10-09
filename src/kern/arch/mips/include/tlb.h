@@ -102,7 +102,7 @@ int tlb_probe(uint32_t entryhi, uint32_t entrylo);
 #define NUM_TLB  64
 
 /*NEW ADDED FUNCTIONS*/
-int tlb_insert(paddr_t paddr, vaddr_t faultaddress);
+int tlb_insert(paddr_t paddr1, paddr_t paddr2, int flag, vaddr_t faultaddress);
 int tlb_get_rr_victim(void);
 int TLB_Invalidate(paddr_t paddr);
 int TLB_update(paddr_t paddr, vaddr_t faultaddress);
