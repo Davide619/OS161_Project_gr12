@@ -319,11 +319,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 						questa variabile tiene conto dell'offset della pagina all'interno dell'elf_file*/
 					
 				/*i will load the frame from elf_file*/
-				ret_val = swap_pagein((vbase1+pt_index), index_swapelf);
+				ret_val = load_page_fromElf((vbase1+pt_index), faultaddress);
 				if(ret_val ==0){
-					kprintf("Swap_in page from swap_file is DONE!\n");
+					kprintf("Frame is loaded from elfFile!\n");
 				}else{
-					panic("ERROR swap_in page from swap_file! the program is stopping...\n");
+					panic("ERROR load from ElfFile! the program is stopping...\n");
 				}
 			}else{
 				/*i will load the frame from swap_file*/
@@ -352,15 +352,13 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			if(load_from_elf == 1){ /*frame out from swap_file*/
 				/*load the frame from elf_file*/
-				index_swapelf = /*queste informazioni devo ricavarle dall'elf file (magari fare una struttura apposita)
-						questa variabile tiene conto dell'offset della pagina all'interno dell'elf_file*/
 					
 				/*i will load the frame from elf_file*/
-				ret_val = swap_pagein((vbase1+pt_index), index_swapelf);
+				ret_val = load_page_fromElf((vbase1+pt_index), faultaddress);
 				if(ret_val ==0){
-					kprintf("Swap_in page from swap_file is DONE!\n");
+					kprintf("Frame is loaded from elfFile!\n");
 				}else{
-					panic("ERROR swap_in page from swap_file! the program is stopping...\n");
+					panic("ERROR load from ElfFile! the program is stopping...\n");
 				}
 			}else{
 				/*i will load the frame from swap_file*/
