@@ -207,7 +207,7 @@ gestire la cosa sennò OS161 CRASHA*/
 
 int vm_fault(int faulttype, vaddr_t faultaddress)                        
 {
-        vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset;
+        vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset, new_pt_index;
         paddr_t paddr, frame_number, old_frame;
         int i,ret_value, spl;
 	uint8_t pt_index;
@@ -291,8 +291,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			
 			/*swap out*/
-			page_in_swapfile = swap_alloc(vbase1+pt_index); //supponendo vbase1 indirizzo virtuale di partenza del primo segmento nell'elf
-			ret_value = swap_pageout((vbase1+pt_index), page_in_swapfile);
+			page_in_swapfile = swap_alloc(get_page_number(vbase1,as->entry_valid)); //supponendo vbase1 indirizzo virtuale di partenza del primo segmento nell'elf
+			ret_value = swap_pageout(get_page_number(vbase1,as->entry_valid), page_in_swapfile);
 			
 			if(ret_value == 0){
 				kprintf("Swap_out page is DONE!\n");
@@ -302,9 +302,17 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			//Qui dobbiamo pulire il FRAME in memoria
 			/* Clear page of memory to be replaced */
-			bzero((void*)(faultaddress & PAGE_FRAME)+pt_index, PAGE_SIZE);
+			bzero((void*)(faultaddress & PAGE_FRAME)+pt_index, PAGE_SIZE);			/*riguardare*/
 			
 			
+			/*n_valid_frames variabile che tiene conto del numero massimo di frame che vogliamo allocare 
+			(recuperare questa informazione dalla struttura info_elfFile)*/
+			
+			
+			
+			
+			new_pt_index = (/*indirizzo di ritorno della nuova funzione*/-vbase1)/PAGE_SIZE;
+			pt_update(as->pt, as->entry_valid, old_frame, n_valid_frames,new_pt_index);
 			
 			//qui devo aggiornare la PT inserendo il frame number in una posizione differente da quella precedente
 			//che dipende dal nuovo indirizzo di fault ricevuto. Questa operazione è importante farla prima di 
@@ -315,11 +323,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			/*Checking where the frame has to be loaded from*/
 			if(load_from_elf == 1){
-				index_swapelf = /*queste informazioni devo ricavarle dall'elf file (magari fare una struttura apposita)
-						questa variabile tiene conto dell'offset della pagina all'interno dell'elf_file*/
 					
 				/*i will load the frame from elf_file*/
-				ret_val = load_page_fromElf((vbase1+pt_index), faultaddress);
+				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);
 				if(ret_val ==0){
 					kprintf("Frame is loaded from elfFile!\n");
 				}else{
@@ -327,7 +333,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}else{
 				/*i will load the frame from swap_file*/
-				ret_val = swap_pagein((vbase1+pt_index), index_swapfile);	
+				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	
 				if(ret_val ==0){
 					kprintf("Swap_in page from swap_file is DONE!\n");
 				}else{
@@ -354,7 +360,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				/*load the frame from elf_file*/
 					
 				/*i will load the frame from elf_file*/
-				ret_val = load_page_fromElf((vbase1+pt_index), faultaddress);
+				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);
 				if(ret_val ==0){
 					kprintf("Frame is loaded from elfFile!\n");
 				}else{
@@ -362,7 +368,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}else{
 				/*i will load the frame from swap_file*/
-				ret_val = swap_pagein((vbase1+pt_index), index_swapfile);	
+				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	
 				if(ret_val ==0){
 					kprintf("Swap_in page from swap_file is DONE!\n");
 				}else{
