@@ -280,7 +280,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		}
 		
 		/*pop from freeframelist*/
-		frame_number = ffl_pop(&as->freeframelist); //Frame number cos'è?
+		frame_number = ffl_pop(&as->freeframelist); 
 		
 		/*check if freeframelist is empty*/
 		if(frame_number == 0){
@@ -308,19 +308,15 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*n_valid_frames variabile che tiene conto del numero massimo di frame che vogliamo allocare 
 			(recuperare questa informazione dalla struttura info_elfFile)*/
 			
-			
-			
-			
-			new_pt_index = (/*indirizzo di ritorno della nuova funzione*/-vbase1)/PAGE_SIZE;
-			pt_update(as->pt, as->entry_valid, old_frame, n_valid_frames,new_pt_index);
+			pt_update(as->pt, as->entry_valid, old_frame, n_valid_frames,pt_index);
 			
 			//qui devo aggiornare la PT inserendo il frame number in una posizione differente da quella precedente
 			//che dipende dal nuovo indirizzo di fault ricevuto. Questa operazione è importante farla prima di 
 			//fare lo swap, quindi scrivere in memoria, perchè altrimenti non ci sarebbe nessun indirizzo fisico (frame 
 			//number) associato all'indirizzo virtuale (page number) che la VOP può leggere.
+			/*questa informazione è recuperata da pt_index sopra*/
 			
-			
-			
+
 			/*Checking where the frame has to be loaded from*/
 			if(load_from_elf == 1){
 					
