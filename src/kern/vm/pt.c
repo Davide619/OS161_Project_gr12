@@ -24,6 +24,11 @@ paddr_t get_victim(paddr_t *pt,uint8_t *entry_valid)
         return pt[entry_valid[index]];
 }
 
+vaddr_t get_page_number(vaddr_t virtualaddr,uint8_t *entry_valid)
+{
+        return ((entry_valid[index]*PAGE_SIZE) + virtualaddr) & PAGE_FRAME;
+}
+
 /*Questa funzione,aggiorna una entry della page table e contemporaneamente un elemento del vettore entry valid:
 - entry_valid è il vettore tiene conto delle sole pagine caricate in memoria (valide) in modo da rispettare il DEMAND PAGING.*/
 void pt_update(paddr_t *pt,uint8_t *entry_valid,paddr_t new_frame,uint8_t nvalidentries,uint8_t pt_index)
