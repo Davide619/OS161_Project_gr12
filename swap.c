@@ -180,6 +180,9 @@ swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out f
 	vaddr_t va;
 	int result;
 	
+	/* Retain the addresspace */
+	as = proc_getas();
+	
 	switch(rw){
 		case UIO_READ:
 			result = vfs_open(path, O_RDONLY, 0, &swapstore);
