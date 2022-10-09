@@ -13,7 +13,7 @@
 
 
 /*FUNZIONE CHE AGGIUNGE UNA NEW ENTRY ALLA TLB*/
-int tlb_insert(paddr_t paddr, vaddr_t faultaddress){        /*paddr is the entrypoint from load_elf function*/
+int tlb_insert(paddr_t paddr1, paddr_t paddr2, int flag, vaddr_t faultaddress){        /*paddr is the entrypoint from load_elf function*/
     
     int spl, victim;
     uint32_t elo;
@@ -28,6 +28,7 @@ int tlb_insert(paddr_t paddr, vaddr_t faultaddress){        /*paddr is the entry
             continue;
         }
         ehi = faultaddress;
+	paddr = flag ? paddr1 : paddr2;
         elo = paddr | TLBLO_DIRTY | TLBLO_VALID;                //vedere in questo caso come settare il dirty bit
         DEBUG(DB_VM, "TLB Added: 0x%x -> 0x%x at location %d\n", faultaddress, paddr, i);
         TLB_Write(ehi, elo, i);
@@ -38,6 +39,7 @@ int tlb_insert(paddr_t paddr, vaddr_t faultaddress){        /*paddr is the entry
 //if i am here, i have no TLB space, so i use replace algorithm
 
     ehi = faultaddress;
+    paddr = flag ? paddr1 : paddr2;
     elo = paddr | TLBLO_DIRTY | TLBLO_VALID; 
 
     victim = tlb_get_rr_victim();
