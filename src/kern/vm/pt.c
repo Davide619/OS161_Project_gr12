@@ -24,7 +24,7 @@ paddr_t get_victim_frame(paddr_t *pt,uint8_t *entry_valid)
         return pt[entry_valid[index]];
 }
 
-uint8_t get_victim_page_number(uint8_t *entry_valid);
+uint8_t get_victim_pt_index(uint8_t *entry_valid)
 {
         return entry_valid[index];
 }
