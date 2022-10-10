@@ -283,7 +283,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		frame_number = ffl_pop(&as->freeframelist); 
 		
 		/*check if freeframelist is empty*/
-		if(frame_number == 0){	/*free frame list piena*/
+		if(frame_number == 0){	/*free frame list vuoto*/
 			/*replacement algorithm*/
 			/*assumiamo che si debba lavorare con indirizzi virtuali e che le informazioni 
 			vengano automaticamente caricate in memoria fisica (RAM)*/
@@ -329,6 +329,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}else{
 				/*i will load the frame from swap_file*/
+				index_swapfile = search_swapped_frame(faultaddress);
 				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	
 				if(ret_val ==0){
 					kprintf("Swap_in page from swap_file is DONE!\n");
@@ -339,7 +340,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			
 		}else{
-			/*QUI SONO NEL CASO IN CUI FREEFRAMELIST è VUOTO*/
+			/*QUI SONO NEL CASO IN CUI FREEFRAMELIST è PIENO*/
 			
 			if(load_from_elf == 1){ /*frame out from swap_file*/
 				
@@ -353,6 +354,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}else{
 				/*i will load the frame from swap_file*/
+				index_swapfile = search_swapped_frame(faultaddress);
 				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	
 				if(ret_val ==0){
 					kprintf("Swap_in page from swap_file is DONE!\n");
@@ -364,9 +366,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 
 			
 		}
-		/*QUI DEVO AGGIORNARE ENTRY_VALID*/
-		
-		
 
 	}
 	/*SE SONO QUI VUOL DIRE CHE PT[PAGE NUMBER] != NULL QUINDI LA PAGE TABLE CONTIENE IL FRAME E DEVO SOLO
@@ -375,7 +374,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		
 	
 	/*MI CHIEDO SE PT[PAGE NUMBER] == NULL OPPURE NO*/
-	if(as->pt[pt_index] == NULL){
+	if(frame_number ==0){
 		/*carico la TLB con la nuova entry*/
                 ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
 		if (ret_TLB_value == 0){
@@ -386,7 +385,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	
 	}else{
 		/*carico la TLB con la nuova entry*/
-		ret_TLB_value = tlb_insert(old_frame, frame_number, 0,faultaddress);
+		ret_TLB_value = tlb_insert(0, frame_number, 0,faultaddress);
 		if (ret_TLB_value == 0){
 			kprintf("TLB was not FULL, new TLB entry is loaded!\n);
 		}else{
@@ -441,7 +440,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
                       continue;  
                 }
                 ehi = faultaddress;
-                elo = paddr | TLBLO_DIRTY | TLBLO_VALID;
+                elo = paddr | TLBLO_DIRTY | TLBLO_VALID;				/*RIGUARDARE COME USARE DIRTY BIT*/
                 DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
                 tlb_write(ehi, elo, i);
                 splx(spl);
