@@ -210,7 +210,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset, new_pt_index;
         paddr_t paddr, frame_number, old_frame;
         int i,ret_value, spl, tlb_victim, ret_TLB_value;
-	uint8_t pt_index;
+	uint8_t pt_index,old_pt_index;
         uint32_t ehi, elo;
         struct addrspace *as;
         off_t index_swapfile, page_in_swapfile;
@@ -288,7 +288,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*assumiamo che si debba lavorare con indirizzi virtuali e che le informazioni 
 			vengano automaticamente caricate in memoria fisica (RAM)*/
 			old_frame = get_victim_frame(as->pt, as->entry_valid);
-			
+			old_pt_index = get_victim_pt_index(as->entry_valid);
 			
 			/*swap out*/
 			page_in_swapfile = swap_alloc(get_page_number(vbase1,as->entry_valid)); //supponendo vbase1 indirizzo virtuale di partenza del primo segmento nell'elf
@@ -308,7 +308,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*n_valid_frames variabile che tiene conto del numero massimo di frame che vogliamo allocare 
 			(recuperare questa informazione dalla struttura info_elfFile)*/
 			
-			pt_update(as->pt, as->entry_valid, old_frame, n_valid_frames,pt_index);
+			pt_update(as->pt, as->entry_valid, old_frame,old_pt_index, n_valid_frames,pt_index);
 			
 			//qui devo aggiornare la PT inserendo il frame number in una posizione differente da quella precedente
 			//che dipende dal nuovo indirizzo di fault ricevuto. Questa operazione è importante farla prima di 
