@@ -319,7 +319,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			//Qui dobbiamo pulire il FRAME in memoria
 			/* Clear page of memory to be replaced */
-			bzero((void*)(faultaddress & PAGE_FRAME)+pt_index, PAGE_SIZE);			/*riguardare*/
+			bzero((void*)(faultaddress & PAGE_FRAME)+pt_index, PAGE_SIZE);			/*riguardare, valutare se passare il page_number o old_frame*/
 			
 					
 					
@@ -346,8 +346,11 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 
 			
 		}else{
-			/*QUI SONO NEL CASO IN CUI NEL FREEFRAMELIST è PIENO*/
+			/*QUI SONO NEL CASO IN CUI NEL FREEFRAMELIST C'è UN FRAME LIBERO*/
+			/*INSERIRE AGGIORNAMENTO PT*/
 			
+			
+			/*INSERIRE AGGIORNAMENTO TLB*/
 			
 			
 			if(load_from_elf == 1){ /*frame out from swap_file*/
@@ -376,30 +379,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		}
 
 	}
-	/*SE SONO QUI VUOL DIRE CHE PT[PAGE NUMBER] != NULL QUINDI LA PAGE TABLE CONTIENE IL FRAME E DEVO SOLO
-	AGGIORNARE LA TLB OPPURE HO UTILIZZATO L'ALGORITMO DI REPLACEMENT E ORA DEVO AGGIORNARE LA TLB. QUINDI DEVO
-	DISCRIMINARE I DUE CASI POICHè GLI INDIRIZZI FISICI DA INSERIRE NELLA TLB SARANNO DIFFERENT (frame_number oppure old_frame)*/
-		
+					
+	/*QUI BISOGNA CAPIRE COME RITENTARE DI RICARICARE L'ISTRUZIONE CHE HA TENTATO IL FAULT*/				
+				
 	
-	/*MI CHIEDO SE PT[PAGE NUMBER] == NULL OPPURE NO*/
-	if(frame_number ==0){
-		/*carico la TLB con la nuova entry*/
-                ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
-		if (ret_TLB_value == 0){
-			kprintf("TLB was not FULL, new TLB entry is loaded!\n);
-		}else{
-			kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
-		}
-	
-	}else{
-		/*carico la TLB con la nuova entry*/
-		ret_TLB_value = tlb_insert(0, frame_number, 0,faultaddress);
-		if (ret_TLB_value == 0){
-			kprintf("TLB was not FULL, new TLB entry is loaded!\n);
-		}else{
-			kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
-		}
-	}
 		
 
 				
@@ -434,32 +417,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         KASSERT((paddr & PAGE_FRAME) == paddr);
 
 
-        /* Disable interrupts on this CPU while frobbing the TLB. */
-        spl = splhigh();/*disabilita l'interrupt per evitare che mentre modifico la tlb si genera un 
-        interrupt e non finisco l'azione*/
-
-
-        for (i=0; i<NUM_TLB; i++) 
-        {
-                tlb_read(&ehi, &elo, i);
-
-                if (elo & TLBLO_VALID) //Controllo se la entry che sto leggendo della TLB è valida
-                {
-                      continue;  
-                }
-                ehi = faultaddress;
-                elo = paddr | TLBLO_DIRTY | TLBLO_VALID;				/*RIGUARDARE COME USARE DIRTY BIT*/
-                DEBUG(DB_VM, "dumbvm: 0x%x -> 0x%x\n", faultaddress, paddr);
-                tlb_write(ehi, elo, i);
-                splx(spl);
-                return 0;
-                
-        }
-        
-
-        kprintf("dumbvm: Ran out of TLB entries - cannot handle page fault\n");
-
-        splx(spl); //Riabilito interrupt 
+					
+					
+					
         
         return EFAULT;
 }
