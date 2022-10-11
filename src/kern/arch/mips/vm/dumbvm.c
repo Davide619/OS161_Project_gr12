@@ -310,6 +310,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			pt_update(as->pt, as->entry_valid, old_frame,old_pt_index, n_valid_frames,pt_index);
 			
+			
+			
+			/*qui dovrei aggiornare anche la TLB perchè fin tanto che non è aggiornata l'operazione di VOP non può essere eseguita*/
+			
+			
+			
 			//qui devo aggiornare la PT inserendo il frame number in una posizione differente da quella precedente
 			//che dipende dal nuovo indirizzo di fault ricevuto. Questa operazione è importante farla prima di 
 			//fare lo swap, quindi scrivere in memoria, perchè altrimenti non ci sarebbe nessun indirizzo fisico (frame 
