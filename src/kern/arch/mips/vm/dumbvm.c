@@ -300,29 +300,28 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				panic("ERROR swap_out page! the program is stopping...\n");
 			}
 			
+			/*PT update*/
+			/*n_valid_frames variabile che tiene conto del numero massimo di frame che vogliamo allocare 
+			(recuperare questa informazione dalla struttura info_elfFile)*/
+			pt_update(as->pt, as->entry_valid, old_frame,old_pt_index, n_valid_frames,pt_index);
+			
+			
+			/*TLB update*/
+			/*carico la TLB con la nuova entry*/
+                	ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
+			if (ret_TLB_value == 0){
+				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
+			}else{
+				kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
+			}
+			
+			
 			//Qui dobbiamo pulire il FRAME in memoria
 			/* Clear page of memory to be replaced */
 			bzero((void*)(faultaddress & PAGE_FRAME)+pt_index, PAGE_SIZE);			/*riguardare*/
 			
-			
-			/*n_valid_frames variabile che tiene conto del numero massimo di frame che vogliamo allocare 
-			(recuperare questa informazione dalla struttura info_elfFile)*/
-			
-			pt_update(as->pt, as->entry_valid, old_frame,old_pt_index, n_valid_frames,pt_index);
-			
-			
-			
-			/*qui dovrei aggiornare anche la TLB perchè fin tanto che non è aggiornata l'operazione di VOP non può essere eseguita*/
-			
-			
-			
-			//qui devo aggiornare la PT inserendo il frame number in una posizione differente da quella precedente
-			//che dipende dal nuovo indirizzo di fault ricevuto. Questa operazione è importante farla prima di 
-			//fare lo swap, quindi scrivere in memoria, perchè altrimenti non ci sarebbe nessun indirizzo fisico (frame 
-			//number) associato all'indirizzo virtuale (page number) che la VOP può leggere.
-			/*questa informazione è recuperata da pt_index sopra*/
-			
-
+					
+					
 			/*Checking where the frame has to be loaded from*/
 			if(load_from_elf == 1){
 					
@@ -343,10 +342,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 					panic("ERROR swap_in page from swap_file! the program is stopping...\n");
 				}
 			}
-			
+
 			
 		}else{
-			/*QUI SONO NEL CASO IN CUI FREEFRAMELIST è PIENO*/
+			/*QUI SONO NEL CASO IN CUI NEL FREEFRAMELIST è PIENO*/
+			
+			
 			
 			if(load_from_elf == 1){ /*frame out from swap_file*/
 				
