@@ -303,7 +303,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*PT update*/
 			/*n_valid_frames variabile che tiene conto del numero massimo di frame che vogliamo allocare 
 			(recuperare questa informazione dalla struttura info_elfFile)*/
-			pt_update(as->pt, as->entry_valid, old_frame,old_pt_index, n_valid_frames,pt_index);
+			pt[old_pt_index] = NULL;
+			pt_update(as->pt, as->entry_valid, old_frame, n_valid_frames,pt_index);
 			
 			
 			/*TLB update*/
