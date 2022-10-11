@@ -38,12 +38,23 @@ vaddr_t get_page_number(vaddr_t virtualaddr,uint8_t *entry_valid)
 - entry_valid è il vettore tiene conto delle sole pagine caricate in memoria (valide) in modo da rispettare il DEMAND PAGING.*/
 void pt_update(paddr_t *pt,uint8_t *entry_valid,paddr_t new_frame,uint8_t old_pt_index,uint8_t nvalidentries,uint8_t new_pt_index)
 {
-    pt[old_pt_index] = NULL;
-    
-    entry_valid[index]==new_pt_index;
+    if(old_pt_index == new_pt_index)
+    {
+        entry_valid[index]==new_pt_index;
 
-    pt[entry_valid[index]] = new_frame;
+        pt[entry_valid[index]] = new_frame;
     
-    index = ((index + 1) == nvalidentries) ? 0 : (index+1);
+        index = ((index + 1) == nvalidentries) ? 0 : (index+1);
+    }
+    else
+    {
+        pt[old_pt_index] = NULL;
+    
+        entry_valid[index]==new_pt_index;
+
+        pt[entry_valid[index]] = new_frame;
+    
+        index = ((index + 1) == nvalidentries) ? 0 : (index+1);
+    }
 
 }
