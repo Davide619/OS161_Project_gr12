@@ -13,6 +13,8 @@
 - src/kern/conf/conf.kern (per aggiungere nuove syscall al kernel)
 - src/kern/arch/mips/vm/dumbvm.c
 
+- funzioni.c
+
 ## FILE MODIFICATI PER TLB MANAGEMENT:
 - src/kern/arch/mips/vm/vm_tlb.c
 - src/kern/arch/mips/include/tlb.h
