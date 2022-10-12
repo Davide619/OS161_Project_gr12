@@ -348,10 +348,15 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		}else{
 			/*QUI SONO NEL CASO IN CUI NEL FREEFRAMELIST C'è UN FRAME LIBERO*/
 			/*INSERIRE AGGIORNAMENTO PT*/
-			
+			pt_update(as->pt, as->entry_valid, frame_number, n_valid_frames,pt_index);
 			
 			/*INSERIRE AGGIORNAMENTO TLB*/
-			
+			ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
+			if (ret_TLB_value == 0){
+				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
+			}else{
+				kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
+			}
 			
 			if(load_from_elf == 1){ /*frame out from swap_file*/
 				
