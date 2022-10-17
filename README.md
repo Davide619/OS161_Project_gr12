@@ -35,6 +35,7 @@ Finito questo ciclo viene chiamata la funzione as_prepare_load(as) che alloca tu
 - src/kern/arch/mips/vm/dumbvm.c
 - src/kern/include/pt.h
 - src/kern/vm/pt.c
+
 <b> Struttura del debug partendo dal loadelf.c:</b>
 
 Funzione int load_elf():questa funzione carica un user program elf file nell'address space del processo attuale e ritorna l'entry point, cioè l'indirizzo iniziale da cui parte il Program Counter:
