@@ -309,7 +309,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			/*TLB update*/
 			/*carico la TLB con la nuova entry*/
-                	ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
+                	ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress); /*questa funzione chiama automaticamente TLBreplace se non trova spazio*/
 			if (ret_TLB_value == 0){
 				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
 			}else{
