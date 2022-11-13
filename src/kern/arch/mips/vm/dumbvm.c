@@ -319,7 +319,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			//Qui dobbiamo pulire il FRAME in memoria
 			/* Clear page of memory to be replaced */
-			bzero((void*)(faultaddress & PAGE_FRAME)+pt_index, PAGE_SIZE);			/*riguardare, valutare se passare il page_number o old_frame*/
+			bzero((void*)(faultaddress & PAGE_FRAME), PAGE_SIZE);			/*riguardare, valutare se passare il page_number o old_frame*/
 			
 					
 					
