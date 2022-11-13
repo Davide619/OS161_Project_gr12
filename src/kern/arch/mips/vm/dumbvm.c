@@ -319,7 +319,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			//Qui dobbiamo pulire il FRAME in memoria
 			/* Clear page of memory to be replaced */
-			bzero((void*)(faultaddress & PAGE_FRAME), PAGE_SIZE);			/*riguardare, valutare se passare il page_number o old_frame*/
+			bzero((void*)(faultaddress & PAGE_FRAME), PAGE_SIZE);				
 			
 					
 					
@@ -327,7 +327,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			if(load_from_elf == 1){
 					
 				/*i will load the frame from elf_file*/
-				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);
+				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);			/*funzione da modificare. sfruttare la funzione load_elf modificata*/
 				if(ret_val ==0){
 					kprintf("Frame is loaded from elfFile!\n");
 				}else{
@@ -335,8 +335,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}else{
 				/*i will load the frame from swap_file*/
-				index_swapfile = search_swapped_frame(faultaddress);
-				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	
+				index_swapfile = search_swapped_frame(faultaddress); /*search the frame inside swapfile returning its index*/
+				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	/*Starting virtualaddress in memory as first parameter of the function
+														(where i expect to find the virtual address that corresponds to physical one)*/
 				if(ret_val ==0){
 					kprintf("Swap_in page from swap_file is DONE!\n");
 				}else{
@@ -347,22 +348,24 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 		}else{
 			/*QUI SONO NEL CASO IN CUI NEL FREEFRAMELIST C'è UN FRAME LIBERO*/
-			/*INSERIRE AGGIORNAMENTO PT*/
+			/*PT update*/
 			pt_update(as->pt, as->entry_valid, frame_number, n_valid_frames,pt_index);
 			
-			/*INSERIRE AGGIORNAMENTO TLB*/
+			/*TLB update*/
 			ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
 			if (ret_TLB_value == 0){
 				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
 			}else{
 				kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
 			}
+
 			
+			/*Checking where the frame has to be loaded from*/
 			if(load_from_elf == 1){ /*frame out from swap_file*/
 				
 				/*load the frame from elf_file*/	
 				/*i will load the frame from elf_file*/
-				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);
+				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);			/*funzione da modificare. sfruttare la funzione load_elf modificata*/
 				if(ret_val ==0){
 					kprintf("Frame is loaded from elfFile!\n");
 				}else{
