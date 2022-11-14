@@ -272,7 +272,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	/*check for an invalid entry in PT*/
 	if(as->pt[pt_index] == NULL){
 		
-		index_swapfile = search_swapped_frame(faultaddress);
+		index_swapfile = search_swapped_frame(faultaddress); /*La funzione vuole come parametro l'indirizzo virtuale della pagina
+									da cercare nello swapfile*/
+		/*Check if the searching was successful*/
+		if(index_swapfile ==0){
+			panic("ERROR search_swapped_frame function was NO successful! the program is stopping...\n");
+		}
 		
 		/*check the page in swapfile*/
 		if(index_swapfile == 0){
@@ -292,8 +297,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 			/*swap out*/
 			page_in_swapfile = swap_alloc(get_page_number(vbase1,as->entry_valid)); //supponendo vbase1 indirizzo virtuale di partenza del primo segmento nell'elf
-			ret_value = swap_pageout(get_page_number(vbase1,as->entry_valid), page_in_swapfile);
-			
+												/*La funzione "swap_alloc" vuole come parametro l'indirizzo virtuale della pagina da allocare nello swap*/
+			ret_value = swap_pageout(get_page_number(vbase1,as->entry_valid), page_in_swapfile);/*La funzione "swap_pageout" vuole:
+													PRIMO parametro --> l'indirizzo virtuale della pagina da portare nello swap file
+													SECONDO parametro --> offset corrispondente alla posizione di allocazione della pagina nello swap File*/
 			if(ret_value == 0){
 				kprintf("Swap_out page is DONE!\n");
 			}else{
@@ -310,6 +317,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*TLB update*/
 			/*carico la TLB con la nuova entry*/
                 	ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress); /*questa funzione chiama automaticamente TLBreplace se non trova spazio*/
+											/*PRIMO parametro --> indirizzo fisico della pagina che si vuole inserire
+											 SECONDO parametro --> indirizzo fisico della pagina che si vuole inserire
+											 TERZO parametro --> 0/1 decide quale dei due indirizzi fisici prendere
+											 QUARTO parametro --> indirizzo virtuale corrispondente a quella pagina fisica*/
 			if (ret_TLB_value == 0){
 				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
 			}else{
@@ -317,7 +328,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 			
 			
-			//Qui dobbiamo pulire il FRAME in memoria
+
 			/* Clear page of memory to be replaced */
 			bzero((void*)(faultaddress & PAGE_FRAME), PAGE_SIZE);				
 			
@@ -335,9 +346,18 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}else{
 				/*i will load the frame from swap_file*/
-				index_swapfile = search_swapped_frame(faultaddress); /*search the frame inside swapfile returning its index*/
+				index_swapfile = search_swapped_frame(faultaddress); /*La funzione vuole come parametro l'indirizzo virtuale della pagina
+											da cercare nello swapfile*/
+				/*Check if the searching was successful*/
+				if(index_swapfile ==0){
+					panic("ERROR search_swapped_frame function was NO successful! the program is stopping...\n");
+				}
+				
 				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	/*Starting virtualaddress in memory as first parameter of the function
 														(where i expect to find the virtual address that corresponds to physical one)*/
+														/*La funzione "swap_pagein" vuole:
+													PRIMO parametro --> l'indirizzo virtuale della pagina da portare in memoria
+													SECONDO parametro --> Posizione (offset) corrispondente alla relativa pagina nello swap File*/
 				if(ret_val ==0){
 					kprintf("Swap_in page from swap_file is DONE!\n");
 				}else{
@@ -373,8 +393,15 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				}
 			}else{
 				/*i will load the frame from swap_file*/
-				index_swapfile = search_swapped_frame(faultaddress);
-				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);	
+				index_swapfile = search_swapped_frame(faultaddress);/*La funzione vuole come parametro l'indirizzo virtuale della pagina
+											da cercare nello swapfile*/
+				/*Check if the searching was successful*/
+				if(index_swapfile ==0){
+					panic("ERROR search_swapped_frame function was NO successful! the program is stopping...\n");
+				}
+				ret_val = swap_pagein(get_page_number(vbase1,as->entry_valid), index_swapfile);/*La funzione "swap_pagein" vuole:
+													PRIMO parametro --> l'indirizzo virtuale della pagina da portare in memoria
+													SECONDO parametro --> Posizione (offset) corrispondente alla relativa pagina nello swap File*/	
 				if(ret_val ==0){
 					kprintf("Swap_in page from swap_file is DONE!\n");
 				}else{
