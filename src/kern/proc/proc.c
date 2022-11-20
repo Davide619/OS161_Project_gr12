@@ -333,4 +333,19 @@ proc_setas(struct addrspace *newas)
          spinlock_release(&proc->p_lock);
          return oldas;
  }
+
+char *proc_getprogname(void)
+{
+	char *progname;
+	struct proc *proc = curproc;
+
+	if (proc == NULL) {
+		return NULL;
+	}
+
+	spinlock_acquire(&proc->p_lock);
+	progname = proc->p_name;
+	spinlock_release(&proc->p_lock);
+	return progname;
+}
  //////////////////////////////END ADDED/////////////////////////////////////////
