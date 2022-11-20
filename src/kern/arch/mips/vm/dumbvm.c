@@ -207,7 +207,7 @@ gestire la cosa sennò OS161 CRASHA*/
 
 int vm_fault(int faulttype, vaddr_t faultaddress)                        
 {
-        vaddr_t vbase1, vtop1, vbase2, vtop2, stackbase, stacktop, page_number, page_offset, new_pt_index;
+        vaddr_t code_segment, vtop_code, data_segment, vtop_data, stackbase, stacktop, page_number, page_offset, new_pt_index;
         paddr_t paddr, frame_number, old_frame;
         int i,ret_value, spl, tlb_victim, ret_TLB_value;
 	uint8_t pt_index,old_pt_index;
@@ -245,21 +245,56 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		
         /* Assert that the address space has been set up properly. */
         
-        KASSERT((as->as_vbase1 != 0) & ((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1)); // <---modified(solo reso compatto)
+        /*KASSERT((as->as_vbase1 != 0) & ((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1)); // <---modified(solo reso compatto)
         KASSERT((as->as_pbase1 != 0) & ((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1));
         KASSERT(as->as_npages1 != 0);
         KASSERT((as->as_vbase2 != 0) & ((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2));
         KASSERT((as->as_pbase2 != 0) & ((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2));
         KASSERT(as->as_npages2 != 0);
-        KASSERT((as->as_stackpbase != 0) & ((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase));
-
-        vbase1 = as->as_vbase1;
+        KASSERT((as->as_stackpbase != 0) & ((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase));*/
+	
+	KASSERT((as->code_seg_start != 0) & ((as->code_seg_start & PAGE_FRAME) == as->code_seg_start));
+	KASSERT((as->data_seg_start != 0) & ((as->data_seg_start & PAGE_FRAME) == as->data_seg_start));
+	
+        /*vbase1 = as->as_vbase1;
         vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
         vbase2 = as->as_vbase2;
         vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
         stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
+        stacktop = USERSTACK;*/
+	
+	code_segment = as->code_seg_start;
+        vtop_code = code_segment + as->code_seg_size - 1;
+	
+        data_segment = as->data_seg_start;
+        vtop_data = vbase2 + as->data_seg_size -1;
+	
+        stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
         stacktop = USERSTACK;
 
+	/*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
+	/*dentro ad ogni if vado a calcolare i giusti indirizzi/offsets da passare alla funzione load_page_fromElf*/
+        if (faultaddress >= code_segment && faultaddress < vtop_code)
+        {       
+        	/*code*/
+		/**/
+
+        }
+        else if (faultaddress >= data_segment && faultaddress < vtop_data) {
+                /*data*/
+		/**/
+        }
+        else if (faultaddress >= stackbase && faultaddress < stacktop) {
+                /*stack*/
+		/**/
+        }
+        else  return EFAULT; /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
+        
+
+        /* make sure it's page-aligned */
+        KASSERT((paddr & PAGE_FRAME) == paddr);
+	
+	
  	/*getting the page number*/
         page_number = faultaddress & PAGE_FRAME;                
         
@@ -416,42 +451,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	}
 					
 	/*QUI BISOGNA CAPIRE COME RITENTARE DI RICARICARE L'ISTRUZIONE CHE HA TENTATO IL FAULT*/				
-				
-	
-		
-
-				
-				
-				
-				
-        
-	
-	
-	
-	
-	
-	
-	
-        /*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
-
-        if (faultaddress >= vbase1 && faultaddress < vtop1)
-        {       
-                paddr = (faultaddress - vbase1) + as->as_pbase1; /*code*/
-
-        }
-        else if (faultaddress >= vbase2 && faultaddress < vtop2) {
-                paddr = (faultaddress - vbase2) + as->as_pbase2; /*data*/
-        }
-        else if (faultaddress >= stackbase && faultaddress < stacktop) {
-                paddr = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
-        }
-        else  return EFAULT; /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
-        
-
-        /* make sure it's page-aligned */
-        KASSERT((paddr & PAGE_FRAME) == paddr);
-
-
+			
 					
 					
 					
@@ -460,6 +460,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 }
 
 
+					
+					
+					
 struct addrspace * as_create(void)
 {
         struct addrspace *as = kmalloc(sizeof(struct addrspace));
