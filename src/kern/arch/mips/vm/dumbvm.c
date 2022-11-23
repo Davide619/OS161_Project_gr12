@@ -267,28 +267,10 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
         vtop_code = code_segment + as->code_seg_size - 1;
 	
         data_segment = as->data_seg_start;
-        vtop_data = vbase2 + as->data_seg_size -1;
+        vtop_data = data_segment + as->data_seg_size -1;
 	
         stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
         stacktop = USERSTACK;
-
-	/*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
-	/*dentro ad ogni if vado a calcolare i giusti indirizzi/offsets da passare alla funzione load_page_fromElf*/
-        if (faultaddress >= code_segment && faultaddress < vtop_code)
-        {       
-        	/*code*/
-		/**/
-
-        }
-        else if (faultaddress >= data_segment && faultaddress < vtop_data) {
-                /*data*/
-		/**/
-        }
-        else if (faultaddress >= stackbase && faultaddress < stacktop) {
-                /*stack*/
-		/**/
-        }
-        else  return EFAULT; /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
         
 
         /* make sure it's page-aligned */
@@ -308,14 +290,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	if(as->pt[pt_index] == NULL){
 		
 		index_swapfile = search_swapped_frame(faultaddress); /*La funzione vuole come parametro l'indirizzo virtuale della pagina
-									da cercare nello swapfile*/
+									da cercare nello swapfile. Ritorna 0 se non trova nulla oppure l'indice*/
 		/*Check if the searching was successful*/
 		if(index_swapfile ==0){
-			panic("ERROR search_swapped_frame function was NO successful! the program is stopping...\n");
-		}
-		
-		/*check the page in swapfile*/
-		if(index_swapfile == 0){
 			load_from_elf = 1; /*frame out from swap file*/			/*<------variable to be declered (global or static)?*/
 		}
 		
@@ -371,9 +348,28 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 					
 			/*Checking where the frame has to be loaded from*/
 			if(load_from_elf == 1){
+				
+				/*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
+				/*dentro ad ogni if vado a calcolare i giusti indirizzi/offsets da passare alla funzione load_page_fromElf*/
+        			if (faultaddress >= code_segment && faultaddress < vtop_code)
+        			{       
+        				/*code*/
+					off_fromELF = offset_fromELF(code_segment, faultaddress, (as -> code_seg_size), (as -> code_seg_offset));
+					flagRWX = 0;
+
+        			}
+        			else if (faultaddress >= data_segment && faultaddress < vtop_data) {
+                			/*data*/
+					off_fromELF = offset_fromELF(data_segment, faultaddress, (as -> data_seg_size), (as -> data_seg_offset));
+					flagRWX = 1;
+        			}
+        			
+        			else  return EFAULT; /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
+
+				
 					
 				/*i will load the frame from elf_file*/
-				ret_val = load_page_fromElf(get_page_number(vbase1,as->entry_valid), faultaddress);			/*funzione da modificare. sfruttare la funzione load_elf modificata*/
+				ret_val = load_page_fromElf(off_fromELF, faultaddress, 4096, 4096, flagRWX);			
 				if(ret_val ==0){
 					kprintf("Frame is loaded from elfFile!\n");
 				}else{
