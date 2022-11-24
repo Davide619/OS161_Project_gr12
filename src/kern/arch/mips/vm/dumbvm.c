@@ -209,7 +209,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 {
         vaddr_t vbase1, vbase2, code_segment, vtop_code, data_segment, vtop_data, stackbase, stacktop, page_number, page_offset, new_pt_index;
         paddr_t paddr, frame_number, old_frame;
-        int i,ret_value, spl, tlb_victim, ret_TLB_value;
+        int i,ret_value, spl, tlb_victim, ret_TLB_value, flagRWX;
 	uint8_t pt_index,old_pt_index;
         uint32_t ehi, elo;
         struct addrspace *as;
@@ -370,7 +370,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				
 					
 				/*i will load the frame from elf_file*/
-				ret_val = load_page_fromElf(off_fromELF, faultaddress, 4096, 4096, flagRWX);			
+				ret_val = load_page_fromElf(off_fromELF, faultaddress, PAGE_SIZE, PAGE_SIZE, flagRWX);			
 				if(ret_val ==0){
 					kprintf("Frame is loaded from elfFile!\n");
 				}else{
@@ -434,7 +434,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 				
 				/*load the frame from elf_file*/	
 				/*i will load the frame from elf_file*/
-				ret_val = load_page_fromElf(off_fromELF, faultaddress, 4096, 4096, flagRWX);
+				ret_val = load_page_fromElf(off_fromELF, faultaddress, PAGE_SIZE, PAGE_SIZE, flagRWX);
 				
 				if(ret_val ==0){
 					kprintf("Frame is loaded from elfFile!\n");
@@ -464,13 +464,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		}
 
 	}
-					
-	/*QUI BISOGNA CAPIRE COME RITENTARE DI RICARICARE L'ISTRUZIONE CHE HA TENTATO IL FAULT*/				
-			
-					
-					
-					
-        
+
         return EFAULT;
 }
 
