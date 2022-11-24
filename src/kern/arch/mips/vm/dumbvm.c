@@ -404,7 +404,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			pt_update(as->pt, as->entry_valid, frame_number, n_valid_frames,pt_index);
 			
 			/*TLB update*/
-			ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress);
+			ret_TLB_value = tlb_insert(old_frame, frame_number, 0,faultaddress);
 			if (ret_TLB_value == 0){
 				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
 			}else{
