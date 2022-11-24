@@ -207,7 +207,7 @@ gestire la cosa sennò OS161 CRASHA*/
 
 int vm_fault(int faulttype, vaddr_t faultaddress)                        
 {
-        vaddr_t code_segment, vtop_code, data_segment, vtop_data, stackbase, stacktop, page_number, page_offset, new_pt_index;
+        vaddr_t vbase1, vbase2, code_segment, vtop_code, data_segment, vtop_data, stackbase, stacktop, page_number, page_offset, new_pt_index;
         paddr_t paddr, frame_number, old_frame;
         int i,ret_value, spl, tlb_victim, ret_TLB_value;
 	uint8_t pt_index,old_pt_index;
@@ -245,21 +245,22 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 		
         /* Assert that the address space has been set up properly. */
         
-        /*KASSERT((as->as_vbase1 != 0) & ((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1)); // <---modified(solo reso compatto)
-        KASSERT((as->as_pbase1 != 0) & ((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1));
+        /*KASSERT((as->as_pbase1 != 0) & ((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1));
         KASSERT(as->as_npages1 != 0);
         KASSERT((as->as_vbase2 != 0) & ((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2));
         KASSERT((as->as_pbase2 != 0) & ((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2));
         KASSERT(as->as_npages2 != 0);
         KASSERT((as->as_stackpbase != 0) & ((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase));*/
 	
+	KASSERT((as->as_vbase1 != 0) & ((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1)); // <---modified(solo reso compatto)
 	KASSERT((as->code_seg_start != 0) & ((as->code_seg_start & PAGE_FRAME) == as->code_seg_start));
 	KASSERT((as->data_seg_start != 0) & ((as->data_seg_start & PAGE_FRAME) == as->data_seg_start));
 	
-        /*vbase1 = as->as_vbase1;
-        vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE;
-        vbase2 = as->as_vbase2;
-        vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
+        vbase1 = as->as_vbase1;	/*indirizzo virtuale d'inizio di un segmento che viene definito nella funzione as_define_region*/
+				/*tale segmento può essere di dato o codice dipende dall'ELFile*/
+	
+        //vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE; 
+        /*vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
         stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
         stacktop = USERSTACK;*/
 	
