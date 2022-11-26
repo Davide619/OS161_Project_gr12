@@ -208,7 +208,7 @@ gestire la cosa sennò OS161 CRASHA*/
 int vm_fault(int faulttype, vaddr_t faultaddress)                        
 {
         vaddr_t vbase1, vbase2, code_segment, vtop_code, data_segment, vtop_data, stackbase, stacktop, page_number, page_offset, new_pt_index;
-        paddr_t paddr, frame_number, old_frame, stack_padd;
+        paddr_t frame_number, old_frame, stack_padd;
         int i,ret_value, spl, tlb_victim, ret_TLB_value, flagRWX;
 	uint8_t pt_index,old_pt_index;
         uint32_t ehi, elo;
@@ -241,16 +241,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
                  */
                 return EFAULT; 
         }
-	
-		
-        /* Assert that the address space has been set up properly. */
-        
-        /*KASSERT((as->as_pbase1 != 0) & ((as->as_pbase1 & PAGE_FRAME) == as->as_pbase1));
-        KASSERT(as->as_npages1 != 0);
-        KASSERT((as->as_vbase2 != 0) & ((as->as_vbase2 & PAGE_FRAME) == as->as_vbase2));
-        KASSERT((as->as_pbase2 != 0) & ((as->as_pbase2 & PAGE_FRAME) == as->as_pbase2));
-        KASSERT(as->as_npages2 != 0);
-        KASSERT((as->as_stackpbase != 0) & ((as->as_stackpbase & PAGE_FRAME) == as->as_stackpbase));*/
+
 	
 	KASSERT((as->as_vbase1 != 0) & ((as->as_vbase1 & PAGE_FRAME) == as->as_vbase1)); // <---modified(solo reso compatto)
 	KASSERT((as->code_seg_start != 0) & ((as->code_seg_start & PAGE_FRAME) == as->code_seg_start));
@@ -258,11 +249,7 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	
         vbase1 = as->as_vbase1;	/*indirizzo virtuale d'inizio di un segmento che viene definito nella funzione as_define_region*/
 				/*tale segmento può essere di dato o codice dipende dall'ELFile*/
-	
-        //vtop1 = vbase1 + as->as_npages1 * PAGE_SIZE; 
-        /*vtop2 = vbase2 + as->as_npages2 * PAGE_SIZE;
-        stackbase = USERSTACK - DUMBVM_STACKPAGES * PAGE_SIZE;
-        stacktop = USERSTACK;*/
+
 	
 	code_segment = as->code_seg_start;
         vtop_code = code_segment + as->code_seg_size - 1;
@@ -272,10 +259,17 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	
         stackbase = USERSTACK - STACKPAGES * PAGE_SIZE;
         stacktop = USERSTACK;
-
 	
-        /* make sure it's page-aligned */
-        KASSERT((paddr & PAGE_FRAME) == paddr);
+	/*se il faultaddress appartiene allo stack, aggiorno solo la TLB e salto tutto il codice sottostante*/
+	if (faultaddress >= stackbase && faultaddress < stacktop) {
+                stack_add = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
+		
+		/* make sure it's page-aligned */
+        	KASSERT((stack_add & PAGE_FRAME) == stack_add);
+		
+		ret_TLB_value = tlb_insert(stack_add, frame_number, 1,faultaddress);
+		return 0;
+        }
 	
 	
  	/*getting the page number*/
@@ -330,19 +324,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*TLB update*/
 			/*carico la TLB con la nuova entry*/
 			
-			/*check if the faultaddress is a stack address*/
-			if (faultaddress >= stackbase && faultaddress < stacktop) {
-                		stack_add = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
-				ret_TLB_value = tlb_insert(stack_add, frame_number, 1,faultaddress);
-        		}
-			else
-			{
-				ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress); /*questa funzione chiama automaticamente TLBreplace se non trova spazio*/
+			
+			ret_TLB_value = tlb_insert(old_frame, frame_number, 1,faultaddress); /*questa funzione chiama automaticamente TLBreplace se non trova spazio*/
 											/*PRIMO parametro --> indirizzo fisico della pagina che si vuole inserire
 											 SECONDO parametro --> indirizzo fisico della pagina che si vuole inserire
 											 TERZO parametro --> 0/1 decide quale dei due indirizzi fisici prendere
 											 QUARTO parametro --> indirizzo virtuale corrispondente a quella pagina fisica*/
-			}
 			if (ret_TLB_value == 0){
 				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
 			}else{
@@ -482,9 +469,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			
 		}
 
+	}else{
+		/*TLB update*/
+		ret_TLB_value = tlb_insert(as->pt[pt_index], NULL, 1,faultaddress);
 	}
 
-        return EFAULT;
+        return 0;
 }
 
 
