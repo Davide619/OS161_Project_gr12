@@ -1,6 +1,30 @@
 #include <coremap.h>
 
+
 static int allocTableActive = 0;
+
+/* list of free frames (0 -> busy, 1 -> freed) */
+static unsigned char *freeRamFrames = NULL;
+
+/* number of frames allocated from the corresponding frame. 
+ * If it is a kernel page knowing this is necessary when
+ * the allocated space should be freed.
+ */
+static unsigned long *allocSize = NULL;
+
+/* number of frames present inside the RAM */
+static int nRamFrames = 0;
+
+/* Set if vm_bootstrap is called */
+static int allocTableActive = 0;
+
+/* spinlock for mutual esclusive access to ram_stealmem */
+static struct spinlock stealmem_lock = SPINLOCK_INITIALIZER;
+
+/* spinlock for mutual esclusive access to ram_stealmem */
+static struct spinlock freemem_lock = SPINLOCK_INITIALIZER;
+
+
 
 static int isTableActive () {
   int active;
