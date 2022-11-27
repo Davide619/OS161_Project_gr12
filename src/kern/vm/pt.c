@@ -6,6 +6,9 @@ paddr_t * pt_create(size_t nentries)
 {
     paddr_t * new_pt = kmalloc(sizeof(paddr_t) * nentries);
     if(new_pt == NULL) return NULL;
+    
+    for(unsigned int i=0; i<nentries; i++)
+        new_pt[i]=0;
 
     return new_pt;
 }
