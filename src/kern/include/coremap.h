@@ -5,6 +5,13 @@
 #include <lib.h>
 #include <vm.h> 
 
+/*structure*/
+void vm_bootstrap(void);
+vaddr_t alloc_kpages(unsigned npages);
+void free_kpages(vaddr_t addr):
+
+
+
 /* data structure representing a (f)ree(f)rame(l)ist
  * implemented as a stack data structure 
  */
