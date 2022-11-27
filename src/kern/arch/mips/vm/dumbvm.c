@@ -331,9 +331,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 											 TERZO parametro --> 0/1 decide quale dei due indirizzi fisici prendere
 											 QUARTO parametro --> indirizzo virtuale corrispondente a quella pagina fisica*/
 			if (ret_TLB_value == 0){
-				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
+				kprintf("TLB was not FULL, new TLB entry is loaded!\n");
 			}else{
-				kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
+				kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n");
 			}
 			
 			
@@ -412,9 +412,9 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			}
 			
 			if (ret_TLB_value == 0){
-				kprintf("TLB was not FULL, new TLB entry is loaded!\n);
+				kprintf("TLB was not FULL, new TLB entry is loaded!\n");
 			}else{
-				kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n);
+				kprintf("TLB was FULL, new TLB entry is loaded by REPLACEMENT ALGORITHM!\n");
 			}
 
 			
