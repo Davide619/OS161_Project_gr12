@@ -207,7 +207,7 @@ gestire la cosa sennò OS161 CRASHA*/
 
 int vm_fault(int faulttype, vaddr_t faultaddress)                        
 {
-        vaddr_t vbase1, vbase2, code_segment, vtop_code, data_segment, vtop_data, stackbase, stacktop, page_number, page_offset, new_pt_index;
+        vaddr_t vbase1, stackbase, stacktop, page_number, page_offset, new_pt_index;
         paddr_t frame_number, old_frame, stack_padd;
         int i,ret_value, spl, tlb_victim, ret_TLB_value, flagRWX;
 	uint8_t pt_index,old_pt_index;
@@ -249,13 +249,6 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	
         vbase1 = as->as_vbase1;	/*indirizzo virtuale d'inizio di un segmento che viene definito nella funzione as_define_region*/
 				/*tale segmento può essere di dato o codice dipende dall'ELFile*/
-
-	
-	code_segment = as->code_seg_start;
-        vtop_code = code_segment + as->code_seg_size - 1;
-	
-        data_segment = as->data_seg_start;
-        vtop_data = data_segment + as->data_seg_size -1;
 	
         stackbase = USERSTACK - STACKPAGES * PAGE_SIZE;
         stacktop = USERSTACK;
@@ -346,24 +339,20 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*Checking where the frame has to be loaded from*/
 			if(load_from_elf == 1){
 				
-				/*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
-				/*dentro ad ogni if vado a calcolare i giusti indirizzi/offsets da passare alla funzione load_page_fromElf*/
-        			if (faultaddress >= code_segment && faultaddress < vtop_code)
-        			{       
-        				/*code*/
-					off_fromELF = offset_fromELF(code_segment, faultaddress, (as -> code_seg_size), (as -> code_seg_offset));
-					flagRWX = 0;
+				/*check if the faultaddress comes from DATA seg, CODE seg*/
+                                switch(which_segment(as,faultaddress)){
+                                        case CODE_SEG:
+                                                off_fromELF = offset_fromELF(as->code_seg_start, faultaddress, (as -> code_seg_size), (as -> code_seg_offset));
+					        flagRWX = 0;
+                                        break;
+                                        case DATA_SEG:
+                                                off_fromELF = offset_fromELF(as->data_seg_start, faultaddress, (as -> data_seg_size), (as -> data_seg_offset));
+					        flagRWX = 1;
+                                        break;
+                                        case ERR_SEG:
+                                                panic("INVALID faultaddress. The program is stopping...\n");
+                                }
 
-        			}
-        			else if (faultaddress >= data_segment && faultaddress < vtop_data) {
-                			/*data*/
-					off_fromELF = offset_fromELF(data_segment, faultaddress, (as -> data_seg_size), (as -> data_seg_offset));
-					flagRWX = 1;
-        			}
-        			
-        			else  return EFAULT; /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
-
-				
 					
 				/*i will load the frame from elf_file*/
 				ret_val = load_page_fromElf(off_fromELF, faultaddress, PAGE_SIZE, PAGE_SIZE, flagRWX);			
@@ -421,22 +410,19 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			/*Checking where the frame has to be loaded from*/
 			if(load_from_elf == 1){ /*frame out from swap_file*/
 				
-				/*In questi if controllo se l'informazione che ricevo dall'indirizzo virtuale fa parte del code, data o stack*/
-				/*dentro ad ogni if vado a calcolare i giusti indirizzi/offsets da passare alla funzione load_page_fromElf*/
-        			if (faultaddress >= code_segment && faultaddress < vtop_code)
-        			{       
-        				/*code*/
-					off_fromELF = offset_fromELF(code_segment, faultaddress, (as -> code_seg_size), (as -> code_seg_offset));
-					flagRWX = 0;
-
-        			}
-        			else if (faultaddress >= data_segment && faultaddress < vtop_data) {
-                			/*data*/
-					off_fromELF = offset_fromELF(data_segment, faultaddress, (as -> data_seg_size), (as -> data_seg_offset));
-					flagRWX = 1;
-        			}
-        			
-        			else  return EFAULT; /*Ritorno un errore qualora tale indirizzo non fa parte di nessuno di questi casi*/
+				/*check if the faultaddress comes from DATA seg, CODE seg*/
+                                switch(which_segment(as,faultaddress)){
+                                        case CODE_SEG:
+                                                off_fromELF = offset_fromELF(as->code_seg_start, faultaddress, (as -> code_seg_size), (as -> code_seg_offset));
+					        flagRWX = 0;
+                                        break;
+                                        case DATA_SEG:
+                                                off_fromELF = offset_fromELF(as->data_seg_start, faultaddress, (as -> data_seg_size), (as -> data_seg_offset));
+					        flagRWX = 1;
+                                        break;
+                                        case ERR_SEG:
+                                                panic("INVALID faultaddress. The program is stopping...\n");
+                                }
 				
 				/*load the frame from elf_file*/	
 				/*i will load the frame from elf_file*/
