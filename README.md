@@ -1,7 +1,7 @@
 # DAVIDE
 ## FILE MODIFICATI/GENERATI PER LO SWAP FILE ED EXIT:
-- swap.c (file generato)
-- swap.h (file generato)
+- src/kern/vm/swapfile.c
+- src/kern/include/swapfile.h
 - src/kern/syscall/file_syscall.c
 - src/kern/include/syscall.h
 - src/kern/arch/mips/syscall/syscall.c
@@ -16,8 +16,12 @@
 - funzioni.c
 
 ## FILE MODIFICATI PER TLB MANAGEMENT:
-- src/kern/arch/mips/vm/vm_tlb.c
-- src/kern/arch/mips/include/tlb.h
+- src/kern/vm/vm_tlb.c
+- src/kern/include/vm_tlb.h
+
+## FILE AGGIUNTI
+- src/kern/vm/segments.c
+- src/kern/include/segments.h
 
 <b>RUNPROGRAM.C:</b>
 1. tale codice richiama LOADELF.C
