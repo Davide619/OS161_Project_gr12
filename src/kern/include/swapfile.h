@@ -22,13 +22,15 @@
  * swap_pageout:     Writes a page to the requested swap address 
  *                   from the requested physical page.
  */
+#define SWAP_READ 1
+#define SWAP_WRITE 2
 
 off_t	 	swap_alloc(vaddr_t vaddr);
 off_t   search_swapped_frame(vaddr_t vaddr);
 
 void 		swap_pagein(vaddr_t vaddr, off_t swapaddr);
 void 		swap_pageout(vaddr_t vaddr, off_t swapaddr);
-void    swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw);
+void    swap_io(vaddr_t vaddr, off_t swapaddr, int rw);
 
 
 /*
