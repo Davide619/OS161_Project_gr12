@@ -12,7 +12,6 @@
 #include <addrspace.h>
 #include <vm.h>
 #include <swap.h>
-#include <machine/coremap.h>
 #include <vfs.h>
 #include <vnode.h>
 
@@ -171,28 +170,30 @@ search_swapped_frame(vaddr_t vaddr)		/*it searches for the frame in swap file*/
  */
 static
 void											/*pa_mem is the phisical address of the frame in memory*/
-swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out function*/
+swap_io(vaddr_t vaddr, off_t swapaddr, int rw)		/*swap in and swap out function*/
 {
 	struct iovec iov;
 	struct uio myuio;
 	struct addrspace *as;
 	vaddr_t va;
-	int result;
+	int result, r_w;
 	
 	/* Retain the addresspace */
 	as = proc_getas();
 	
 	switch(rw){
-		case UIO_READ:
+		case SWAP_READ:
 			result = vfs_open(path, O_RDONLY, 0, &swapstore);
+			r_w = 1;
 			if (result) {
 				vfs_close(swapstore);
 				panic("ERROR: swap_in opening failed.\n");
 			}
 			break;
 			
-		case UIO_WRITE:
+		case SWAP_WRITE:
 			result = vfs_open(path, O_WRONLY, 0, &swapstore);
+			r_w = 0;
 			if (result) {
 				vfs_close(swapstore);
 				panic("ERROR: swap_out opening failed.\n");
@@ -208,7 +209,7 @@ swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out f
         myuio.uio_resid = PAGE_SIZE;          // amount to read from the file
         myuio.uio_offset = swapaddr;		
         myuio.uio_segflg = UIO_USERSPACE; //is_executable ? UIO_USERISPACE : UIO_USERSPACE;
-        myuio.uio_rw = rw;
+        myuio.uio_rw = r_w ? UIO_READ : UIO_WRITE;
         myuio.uio_space = as;						
 
 
@@ -254,7 +255,7 @@ swap_io(vaddr_t vaddr, off_t swapaddr, enum uio_rw rw)		/*swap in and swap out f
 void
 swap_pagein(vaddr vaddr, off_t swapaddr)
 {
-	swap_io(vaddr, swapaddr, UIO_READ);
+	swap_io(vaddr, swapaddr, SWAP_READ);
 }
 
 
@@ -265,5 +266,5 @@ swap_pagein(vaddr vaddr, off_t swapaddr)
 void
 swap_pageout(vaddr vaddr, off_t swapaddr)
 {
-	swap_io(vaddr, swapaddr, UIO_WRITE);
+	swap_io(vaddr, swapaddr, SWAP_WRITE);
 }
