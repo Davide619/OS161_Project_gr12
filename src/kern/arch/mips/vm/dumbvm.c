@@ -255,12 +255,12 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 	
 	/*se il faultaddress appartiene allo stack, aggiorno solo la TLB e salto tutto il codice sottostante*/
 	if (faultaddress >= stackbase && faultaddress < stacktop) {
-                stack_add = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
+                stack_padd = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
 		
 		/* make sure it's page-aligned */
-        	KASSERT((stack_add & PAGE_FRAME) == stack_add);
+        	KASSERT((stack_add & PAGE_FRAME) == stack_padd);
 		
-		ret_TLB_value = tlb_insert(stack_add, frame_number, 1,faultaddress);
+		ret_TLB_value = tlb_insert(stack_padd, frame_number, 1,faultaddress);
 		return 0;
         }
 	
@@ -389,16 +389,8 @@ int vm_fault(int faulttype, vaddr_t faultaddress)
 			pt_update(as->pt, as->entry_valid, frame_number, n_valid_frames,pt_index);
 			
 			/*TLB update*/
-			
-			/*check if the faultaddress is a stack address*/
-			if (faultaddress >= stackbase && faultaddress < stacktop) {
-                		stack_add = (faultaddress - stackbase) + as->as_stackpbase; /*stack*/
-				ret_TLB_value = tlb_insert(stack_add, frame_number, 1,faultaddress);
-        		}
-			else
-			{
-				ret_TLB_value = tlb_insert(old_frame, frame_number, 0,faultaddress);
-			}
+			ret_TLB_value = tlb_insert(old_frame, frame_number, 0,faultaddress);
+		
 			
 			if (ret_TLB_value == 0){
 				kprintf("TLB was not FULL, new TLB entry is loaded!\n");
