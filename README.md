@@ -35,7 +35,7 @@ Finito questo ciclo viene chiamata la funzione as_prepare_load(as) che alloca tu
 3. il secondo ciclo for rilegge nuovamente l'header dato e codice dall'elf file e avendo già definito la regione di memoria al ciclo for precedente, carica ciasun segmento nella locazione opportuna.
 
 # ALESSANDRO
-## FILE MODIFICATI/GENERATI:
+## FILE MODIFICATI/GENERATI PER PT MANAGEMENT:
 - src/kern/arch/mips/vm/dumbvm.c
 - src/kern/include/pt.h
 - src/kern/vm/pt.c
